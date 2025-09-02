@@ -1,0 +1,24 @@
+{
+  "name": "ncdetailing",
+  "version": "1.0.0",
+  "description": "Sistema de ventas para NcDetailing",
+  "homepage": "https://github.com/facucastellano19/NcDetailing#readme",
+  "bugs": {
+    "url": "https://github.com/facucastellano19/NcDetailing/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/facucastellano19/NcDetailing.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
