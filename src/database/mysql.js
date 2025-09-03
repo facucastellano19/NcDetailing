@@ -1,19 +1,24 @@
-const mysql = require('promise-mysql')
-require('dotenv').config()
+require('dotenv').config();
+const mysql = require('mysql2/promise');
 
-const dbconfig = {
+const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE
+    database: process.env.DB_DATABASE,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+async function getConnection() {
+    try {
+        const connection = await pool.getConnection();
+        return connection;
+    } catch (error) {
+        console.error('Error getting database connection:', error);
+        throw error;
+    }
 }
 
-const connection = mysql.createConnection(dbconfig)
-    .catch(err =>{
-        console.error('Error al conectarme a la DB: ', err.message)
-    })
-
-function getConnection(){
-    return connection
-}
-module.exports = getConnection
+module.exports = getConnection;
