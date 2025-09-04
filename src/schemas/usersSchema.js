@@ -71,7 +71,6 @@ const registerSchema = Joi.object({
 
     role_id: Joi.number()
         .integer()
-        .required()
         .messages({
             'number.base': 'Role ID must be a number',
             'number.integer': 'Role ID must be an integer',

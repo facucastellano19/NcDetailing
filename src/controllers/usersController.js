@@ -20,6 +20,7 @@ async function register(req, res, next) {
 
         if (isFirstUser) {
             created_by = 1;
+            data.role_id = 1;
         } else if (!created_by) {
             const error = new Error("Missing created_by from token");
             error.status = 400;
