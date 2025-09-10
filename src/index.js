@@ -2,12 +2,16 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 const usersRouter = require('./routers/usersRouter');
-const { logError, errorHandler } = require('./middlewares/errorHandler');
 const docsRouter = require('./routers/docsRouter');
+const employeesRouter = require('./routers/employeesRouter');
+const { logError, errorHandler } = require('./middlewares/errorHandler');
+
 
 app.use('/api/docs', docsRouter);
 
 app.use('/api/users',usersRouter)
+
+app.use('/api/employees',employeesRouter)
 
 app.get('/', (req, res) => {
     res.send('Sistema de ventas NcDetailing activo')

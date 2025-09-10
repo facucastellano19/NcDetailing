@@ -60,6 +60,7 @@ class UsersService {
 
             const hashedPassword = await bcrypt.hash(data.password, 10);
 
+            const role_id = data.role_id || 2;
             const query = `
             INSERT INTO users (name, email, username, password, role_id, created_at, created_by)
             VALUES (?, ?, ?, ?, ?, NOW(), ?)
@@ -69,7 +70,7 @@ class UsersService {
                 data.email,
                 data.username,
                 hashedPassword,
-                data.role_id,
+                role_id,
                 data.created_by
             ]);
 
