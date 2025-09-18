@@ -3,9 +3,11 @@ const app = express();
 app.use(express.json());
 const usersRouter = require('./routers/usersRouter');
 const docsRouter = require('./routers/docsRouter');
+const clientsRouter = require('./routers/clientsRouter');
 const employeesRouter = require('./routers/employeesRouter');
 const { logError, errorHandler } = require('./middlewares/errorHandler');
 
+app.use('/api/clients',clientsRouter)
 
 app.use('/api/docs', docsRouter);
 
