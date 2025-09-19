@@ -20,6 +20,16 @@ async function getClientById(req, res, next) {
     }
 }
 
+async function getClientVehicles(req, res, next) {
+    try{
+        const id = req.params.id;
+        const vehicles = await service.getClientVehicles(id);
+        res.json(vehicles);
+    } catch (error) {
+        next(error);
+    }
+
+}
 
 async function postClient(req, res, next) {
     try {
@@ -46,4 +56,4 @@ async function putClient(req, res, next) {
 
 
 
-module.exports = { getClients, getClientById, postClient, putClient }
+module.exports = { getClients, getClientById, postClient, putClient, getClientVehicles }

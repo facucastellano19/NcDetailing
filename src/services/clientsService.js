@@ -14,6 +14,33 @@ class ClientsService {
         }
     }
 
+    async getClientVehicles(id) {
+        const connection = await getConnection();
+
+        const [client] = await connection.query(
+            `SELECT id, first_name, last_name FROM clients WHERE id = ?`,
+            [id]
+        );
+
+        if (!client[0]) {
+            const error = new Error('Client not found');
+            error.status = 404;
+            throw error;
+        }
+
+        const [vehicles] = await connection.query(
+            `SELECT id, brand, model, year, color, license_plate 
+             FROM vehicles 
+             WHERE client_id = ? AND deleted_at IS NULL`,
+            [id]
+        );
+
+        return {
+            message: 'Vehicles retrieved successfully',
+            data: vehicles
+        };
+    }
+
     async getClientById(id) {
         const connection = await getConnection();
         const query = `SELECT id, first_name, last_name, email, phone
@@ -39,7 +66,7 @@ class ClientsService {
         await connection.beginTransaction(); // Start transaction
 
         try {
-            // Verificar si ya existe cliente con mismo email o teléfono
+            // Verify unique email and phone
             const [clients] = await connection.query(
                 `SELECT id FROM clients WHERE email = ? OR phone = ?`,
                 [data.email, data.phone]
@@ -51,7 +78,7 @@ class ClientsService {
                 throw error;
             }
 
-            // Insertar cliente
+            // Insert client
             const [result] = await connection.query(
                 `INSERT INTO clients 
              (first_name, last_name, email, phone, created_by, created_at)
@@ -61,9 +88,9 @@ class ClientsService {
 
             const newCustomerId = result.insertId;
 
-            // Manejar vehículos asociados si se proporcionan
+            // Handle vehicles if provided
             if (data.vehicles && data.vehicles.length > 0) {
-                // Primero revisar todas las patentes para conflictos
+                // Check for license plate conflicts
                 const conflictPlates = [];
                 for (let vehicle of data.vehicles) {
                     const [existingVehicle] = await connection.query(
@@ -83,7 +110,7 @@ class ClientsService {
                     throw error;
                 }
 
-                // Insertar vehículos si no hay conflictos
+                // Insert vehicles if no conflicts
                 for (let vehicle of data.vehicles) {
                     await connection.query(
                         `INSERT INTO vehicles 
@@ -102,7 +129,6 @@ class ClientsService {
                 }
             }
 
-            // Confirmar transacción
             await connection.commit();
 
             return {
@@ -111,15 +137,14 @@ class ClientsService {
             };
 
         } catch (err) {
-            await connection.rollback(); // Rollback si hay error
-            throw err;
+            await connection.rollback();
         }
     }
 
 
     async putClient(id, data) {
         const connection = await getConnection();
-        await connection.beginTransaction(); // start transaction
+        await connection.beginTransaction();
 
         try {
             // Verify if client exists
@@ -168,10 +193,10 @@ class ClientsService {
 
                 // Check for license plate conflicts
                 for (let vehicle of data.vehicles) {
-                    if (!vehicle.deleted) { // solo los que no se eliminan
+                    if (!vehicle.deleted) {
                         const [existingVehicle] = await connection.query(
                             `SELECT id FROM vehicles WHERE license_plate = ? AND id != ?`,
-                            [vehicle.license_plate, vehicle.id || 0] // id 0 para nuevos vehículos
+                            [vehicle.license_plate, vehicle.id || 0]
                         );
                         if (existingVehicle[0]) {
                             conflictPlates.push(vehicle.license_plate);
@@ -184,6 +209,20 @@ class ClientsService {
                         `Vehicles with license plates already assigned: ${conflictPlates.join(', ')}`
                     );
                     error.status = 409;
+                    throw error;
+                }
+
+                // Ensure at least one vehicle remains
+                const remainingVehicles = data.vehicles.filter(v => !v.deleted).length;
+                const [currentVehicles] = await connection.query(
+                    `SELECT id FROM vehicles WHERE client_id = ? AND deleted_at IS NULL`,
+                    [id]
+                );
+                const totalRemaining = remainingVehicles + currentVehicles.filter(cv => !data.vehicles.some(v => v.id === cv.id && v.deleted)).length;
+
+                if (totalRemaining === 0) {
+                    const error = new Error('A client must have at least one vehicle');
+                    error.status = 400;
                     throw error;
                 }
 
