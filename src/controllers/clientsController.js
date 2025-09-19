@@ -3,7 +3,8 @@ const service = new clientsService();
 
 async function getClients(req, res, next) {
     try {
-        const clients = await service.getClients();
+        const { search } = req.query;
+        const clients = await service.getClients(search);
         res.json(clients);
     } catch (error) {
         next(error);

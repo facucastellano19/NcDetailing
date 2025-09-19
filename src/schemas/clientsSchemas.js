@@ -129,4 +129,10 @@ const getClientByIdSchema = Joi.object({
   })
 });
 
-module.exports = { postClientSchema, putClientSchema, getClientByIdSchema };
+const getClientsSchema = Joi.object({
+  search: Joi.string().optional().messages({
+    'string.base': 'Search term must be text'
+  })
+});
+
+module.exports = { postClientSchema, putClientSchema, getClientByIdSchema, getClientsSchema };

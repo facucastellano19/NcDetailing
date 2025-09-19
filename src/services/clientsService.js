@@ -2,16 +2,41 @@ const getConnection = require('../database/mysql');
 
 class ClientsService {
 
-    async getClients() {
+    async getClients(search) {
         const connection = await getConnection();
-        const query = `
-            SELECT id, first_name, last_name, email, phone
-            FROM clients`
-        const [clients] = await connection.query(query);
+
+        let query = `
+            SELECT DISTINCT c.id, c.first_name, c.last_name, c.email, c.phone
+            FROM clients c
+            LEFT JOIN vehicles v ON c.id = v.client_id AND v.deleted_at IS NULL
+        `;
+        const queryParams = [];
+
+        if (search) {
+            const searchTerm = `%${search}%`;
+            query += `
+                WHERE c.first_name LIKE ?
+                   OR c.last_name LIKE ?
+                   OR c.email LIKE ?
+                   OR c.phone LIKE ?
+                   OR v.brand LIKE ?
+                   OR v.model LIKE ?
+                   OR v.license_plate LIKE ?
+            `;
+            queryParams.push(
+                searchTerm, searchTerm, searchTerm, searchTerm,
+                searchTerm, searchTerm, searchTerm
+            );
+        }
+
+        query += ` ORDER BY c.id`;
+
+        const [clients] = await connection.query(query, queryParams);
+
         return {
             message: 'Clients retrieved successfully',
             data: clients
-        }
+        };
     }
 
     async getClientVehicles(id) {

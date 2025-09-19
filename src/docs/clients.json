@@ -2,10 +2,19 @@
   "paths": {
     "/api/clients": {
       "get": {
-        "summary": "Get all clients",
+        "summary": "Get all clients with optional search filter",
         "tags": ["Clients"],
         "security": [
           { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "example": "John Doe" },
+            "description": "Search term for client name, email, phone, or vehicle details"
+          }
         ],
         "responses": {
           "200": {
@@ -111,6 +120,35 @@
           "409": { "description": "Another client with this email or phone already exists, or vehicle license plate conflict" }
         }
       }
+    },
+    "/api/clients/{id}/vehicles": {
+      "get": {
+        "summary": "Get vehicles by client ID",
+        "tags": ["Clients"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vehicles retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClientVehiclesResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Client not found" }
+        }
+      }
     }
   },
   "components": {
@@ -200,6 +238,16 @@
           "data": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/Client" }
+          }
+        }
+      },
+      "ClientVehiclesResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Vehicles retrieved successfully" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Vehicle" }
           }
         }
       }
