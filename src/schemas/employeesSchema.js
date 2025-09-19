@@ -10,15 +10,17 @@ const putEmployeeSchema = Joi.object({
         .max(50)
         .optional()
         .messages({
+            'string.base': 'Name must be a string',
             'string.min': 'Name must be at least 3 characters long',
-            'string.max': 'Name must be at most 50 characters long',
+            'string.max': 'Name must be at most 50 characters long'
         }),
 
     email: Joi.string()
         .email()
         .optional()
         .messages({
-            'string.email': 'Email must be a valid email address',
+            'string.base': 'Email must be a string',
+            'string.email': 'Email must be a valid email address'
         }),
 
     username: Joi.string()
@@ -27,9 +29,10 @@ const putEmployeeSchema = Joi.object({
         .max(30)
         .optional()
         .messages({
+            'string.base': 'Username must be a string',
             'string.alphanum': 'Username must be alphanumeric',
             'string.min': 'Username must be at least 3 characters long',
-            'string.max': 'Username must be at most 30 characters long',
+            'string.max': 'Username must be at most 30 characters long'
         }),
 
     password: Joi.string()
@@ -38,9 +41,10 @@ const putEmployeeSchema = Joi.object({
         .max(30)
         .optional()
         .messages({
+            'string.base': 'Password must be a string',
             'string.pattern.base': 'Password must be alphanumeric and can include special characters',
             'string.min': 'Password must be at least 8 characters long',
-            'string.max': 'Password must be at most 30 characters long',
+            'string.max': 'Password must be at most 30 characters long'
         }),
 
     role_id: Joi.number()
@@ -50,6 +54,7 @@ const putEmployeeSchema = Joi.object({
         .messages({
             'number.base': 'Role ID must be a number',
             'number.integer': 'Role ID must be an integer',
+            'any.only': 'Role ID must be 1 or 2'
         }),
 
     updated_by: Joi.number()
@@ -58,8 +63,8 @@ const putEmployeeSchema = Joi.object({
         .messages({
             'number.base': 'Updated by must be a number',
             'number.integer': 'Updated by must be an integer',
-            'any.required': 'Updated by is required'
-        }),
+            'any.unknown': 'Cannot send updated_by field'
+        })
 });
 
 const deleteEmployeeSchema = Joi.object({
