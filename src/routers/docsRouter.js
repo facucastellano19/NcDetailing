@@ -7,6 +7,7 @@ const router = express.Router();
 // Cargar los archivos JSON
 const users = require(path.join(__dirname, '../docs/users.json'));
 const employees = require(path.join(__dirname, '../docs/employees.json'));
+const clients = require(path.join(__dirname, '../docs/clients.json'));
 
 // Combinar paths y components
 const swaggerDocument = {
@@ -14,12 +15,14 @@ const swaggerDocument = {
   info: users.info, // podés personalizar
   paths: {
     ...users.paths,
-    ...employees.paths
+    ...employees.paths,
+    ...clients.paths
   },
   components: {
     schemas: {
       ...users.components.schemas,
-      ...employees.components.schemas
+      ...employees.components.schemas,
+      ...clients.components.schemas
     },
     securitySchemes: {
       ...users.components.securitySchemes

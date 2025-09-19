@@ -1,0 +1,208 @@
+{
+  "paths": {
+    "/api/clients": {
+      "get": {
+        "summary": "Get all clients",
+        "tags": ["Clients"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "responses": {
+          "200": {
+            "description": "Clients retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClientResponseList" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Create a new client",
+        "tags": ["Clients"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClientPost" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Client created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClientResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "409": { "description": "Client with this email or phone already exists, or vehicle license plate conflict" }
+        }
+      }
+    },
+    "/api/clients/{id}": {
+      "get": {
+        "summary": "Get client by ID",
+        "tags": ["Clients"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClientResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Client not found" }
+        }
+      },
+      "put": {
+        "summary": "Update a client",
+        "tags": ["Clients"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClientPut" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Client updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClientResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Client not found" },
+          "409": { "description": "Another client with this email or phone already exists, or vehicle license plate conflict" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Client": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "first_name": { "type": "string", "example": "John" },
+          "last_name": { "type": "string", "example": "Doe" },
+          "email": { "type": "string", "example": "john.doe@example.com" },
+          "phone": { "type": "string", "example": "1234567890" }
+        }
+      },
+      "Vehicle": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1, "readOnly": true },
+          "brand": { "type": "string", "example": "Toyota" },
+          "model": { "type": "string", "example": "Corolla" },
+          "year": { "type": "integer", "example": 2020 },
+          "color": { "type": "string", "example": "Red" },
+          "license_plate": { "type": "string", "example": "ABC-123" }
+        }
+      },
+      "ClientPost": {
+        "type": "object",
+        "properties": {
+          "first_name": { "type": "string", "example": "Jane" },
+          "last_name": { "type": "string", "example": "Smith" },
+          "email": { "type": "string", "example": "jane.smith@example.com" },
+          "phone": { "type": "string", "example": "0987654321" },
+          "vehicles": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/VehiclePost" }
+          }
+        },
+        "required": ["first_name", "last_name", "email", "phone", "vehicles"]
+      },
+      "VehiclePost": {
+        "type": "object",
+        "properties": {
+          "brand": { "type": "string", "example": "Ford" },
+          "model": { "type": "string", "example": "Fiesta" },
+          "year": { "type": "integer", "example": 2018 },
+          "color": { "type": "string", "example": "Blue" },
+          "license_plate": { "type": "string", "example": "XYZ-789" }
+        },
+        "required": ["brand", "model", "year", "color", "license_plate"]
+      },
+      "ClientPut": {
+        "type": "object",
+        "properties": {
+          "first_name": { "type": "string", "example": "Janet" },
+          "last_name": { "type": "string", "example": "Smith" },
+          "email": { "type": "string", "example": "janet.smith@example.com" },
+          "phone": { "type": "string", "example": "0987654322" },
+          "vehicles": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/VehiclePut" }
+          }
+        }
+      },
+      "VehiclePut": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "brand": { "type": "string", "example": "Ford" },
+          "model": { "type": "string", "example": "Focus" },
+          "year": { "type": "integer", "example": 2020 },
+          "color": { "type": "string", "example": "Black" },
+          "license_plate": { "type": "string", "example": "QWE-456" },
+          "deleted": { "type": "boolean", "example": false }
+        }
+      },
+      "ClientResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Client created/updated/retrieved successfully" },
+          "data": { "$ref": "#/components/schemas/Client" }
+        }
+      },
+      "ClientResponseList": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Clients retrieved successfully" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Client" }
+          }
+        }
+      }
+    }
+  }
+}
