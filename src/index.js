@@ -6,6 +6,9 @@ const docsRouter = require('./routers/docsRouter');
 const clientsRouter = require('./routers/clientsRouter');
 const employeesRouter = require('./routers/employeesRouter');
 const { logError, errorHandler } = require('./middlewares/errorHandler');
+const servicesRouter = require('./routers/servicesRouter');
+
+app.use('/api/services',servicesRouter)
 
 app.use('/api/clients',clientsRouter)
 

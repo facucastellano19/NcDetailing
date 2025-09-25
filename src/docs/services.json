@@ -1,0 +1,254 @@
+{
+  "paths": {
+    "/api/services": {
+      "get": {
+        "summary": "Get all services",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Filter services by name (partial match)",
+            "required": false,
+            "schema": { "type": "string", "example": "Wash" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filter services by category name (partial match)",
+            "required": false,
+            "schema": { "type": "string", "example": "Exterior" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Services retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponseList" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Create a new service",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ServicePost" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Service created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "409": { "description": "Service with this name already exists" }
+        }
+      }
+    },
+    "/api/services/{id}": {
+      "get": {
+        "summary": "Get service by ID",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Service not found" }
+        }
+      },
+      "put": {
+        "summary": "Update a service",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ServicePut" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Service not found" },
+          "409": { "description": "Service with this name already exists" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a service",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceDeleteResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Service not found" }
+        }
+      }
+    },
+    "/api/services/categories": {
+      "get": {
+        "summary": "Get all service categories",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service categories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceCategoryResponseList" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Service": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "category_id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Basic Wash" },
+          "description": { "type": "string", "example": "Exterior wash and tire shine" },
+          "price": { "type": "number", "format": "float", "example": 15.00 },
+          "category": { "type": "string", "example": "Exterior" }
+        }
+      },
+      "ServiceCategory": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Exterior" }
+        }
+      },
+      "ServicePost": {
+        "type": "object",
+        "properties": {
+          "category_id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Premium Wash" },
+          "description": { "type": "string", "example": "Exterior wash, interior vacuum, tire shine" },
+          "price": { "type": "number", "format": "float", "example": 25.00 }
+        },
+        "required": ["category_id", "name", "price"]
+      },
+      "ServicePut": {
+        "type": "object",
+        "properties": {
+          "category_id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Deluxe Wash" },
+          "description": { "type": "string", "example": "Full exterior and interior detailing" },
+          "price": { "type": "number", "format": "float", "example": 40.00 }
+        }
+      },
+      "ServiceDeleteResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "message": { "type": "string", "example": "Service deleted successfully" }
+        }
+      },
+      "ServiceResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Service created/updated/retrieved successfully" },
+          "data": { "$ref": "#/components/schemas/Service" }
+        }
+      },
+      "ServiceResponseList": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Services retrieved successfully" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Service" }
+          }
+        }
+      },
+      "ServiceCategoryResponseList": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Service categories retrieved successfully" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ServiceCategory" }
+          }
+        }
+      }
+    }
+  }
+}

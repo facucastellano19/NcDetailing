@@ -8,6 +8,7 @@ const router = express.Router();
 const users = require(path.join(__dirname, '../docs/users.json'));
 const employees = require(path.join(__dirname, '../docs/employees.json'));
 const clients = require(path.join(__dirname, '../docs/clients.json'));
+const services = require(path.join(__dirname, '../docs/services.json'));
 
 // Combine them into a single Swagger document
 const swaggerDocument = {
@@ -16,13 +17,15 @@ const swaggerDocument = {
   paths: {
     ...users.paths,
     ...employees.paths,
-    ...clients.paths
+    ...clients.paths,
+    ...services.paths
   },
   components: {
     schemas: {
       ...users.components.schemas,
       ...employees.components.schemas,
-      ...clients.components.schemas
+      ...clients.components.schemas,
+      ...services.components.schemas
     },
     securitySchemes: {
       ...users.components.securitySchemes
