@@ -71,9 +71,22 @@ const deleteServiceSchema = Joi.object({
     })
 });
 
+const postCategorySchema = Joi.object({
+    name: Joi.string().max(100).required().messages({
+        'string.base': 'Name must be text',
+        'string.empty': 'Name is required',
+        'string.max': 'Name cannot exceed 100 characters',
+        'any.required': 'Name is required'
+    }),
+    created_by: Joi.number().integer().positive().forbidden().messages({
+        'any.unknown': 'Cannot send created_by field'
+    })
+});
+
 module.exports = {
     getServiceByIdSchema,
     postServiceSchema,
     putServiceSchema,
-    deleteServiceSchema
+    deleteServiceSchema,
+    postCategorySchema
 };

@@ -173,6 +173,33 @@
           },
           "401": { "description": "Unauthorized" }
         }
+      },
+      "post": {
+        "summary": "Create a new service category",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CategoryPost" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "409": { "description": "Category with this name already exists" }
+        }
       }
     }
   },
@@ -246,6 +273,26 @@
           "data": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/ServiceCategory" }
+          }
+        }
+      },
+      "CategoryPost": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "New Category" }
+        },
+        "required": ["name"]
+      },
+      "CategoryResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Category created successfully" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer", "example": 1 },
+              "name": { "type": "string", "example": "New Category" }
+            }
           }
         }
       }

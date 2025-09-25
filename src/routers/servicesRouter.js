@@ -1,6 +1,6 @@
 const express = require('express')
-const { getServices, getServiceById, postService, putService, deleteService, getCategories } = require('../controllers/servicesController');
-const {getServiceByIdSchema, postServiceSchema, putServiceSchema, deleteServiceSchema} = require('../schemas/servicesSchema');
+const { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory } = require('../controllers/servicesController');
+const {getServiceByIdSchema, postServiceSchema, putServiceSchema, deleteServiceSchema, postCategorySchema} = require('../schemas/servicesSchema');
 const {validatorHandler} = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 
@@ -14,6 +14,12 @@ servicesRouter.get('/',
 servicesRouter.get('/categories',
     checkRole(1),
     getCategories)
+
+servicesRouter.post('/categories',
+    checkRole(1),
+    validatorHandler(postCategorySchema, 'body'),
+    postCategory
+)
 
 servicesRouter.get('/:id',
     checkRole(1),

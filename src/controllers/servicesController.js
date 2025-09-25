@@ -66,4 +66,15 @@ async function getCategories(req, res, next) {
 }
 
 
-module.exports = { getServices, getServiceById, postService, putService, deleteService, getCategories }
+async function postCategory(req, res, next) {
+    try {
+        const data = req.body;
+        data.created_by = req.userIdToken;
+        const newCategory = await service.postCategory(data);
+        res.status(201).json(newCategory);
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory }
