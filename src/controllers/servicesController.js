@@ -3,7 +3,8 @@ const service = new servicesService();
 
 async function getServices(req, res, next) {
     try {
-        const services = await service.getServices();
+        //const { search } = req.query;
+        const services = await service.getServices(search);
         res.json(services);
     } catch (error) {
         next(error);
@@ -48,20 +49,11 @@ async function deleteService(req, res, next) {
         const id = req.params.id;
         const data = { deleted_by: req.userIdToken}
         result = await service.deleteService(id,data);
-        res.status(200).json(result);
+        res.status(200).json();
     } catch (error) {
         next(error);
     }  
 }
 
 
-async function getCategories(req, res, next) {
-    try {
-        const categories = await service.getCategories();
-        res.json(categories);
-    } catch (error) {
-        next(error);
-    }
-}
-
-module.exports = { getServices, getServiceById, postService, putService, deleteService, getCategories }
+module.exports = { getServices, getServiceById, postService, putService, deleteService }
