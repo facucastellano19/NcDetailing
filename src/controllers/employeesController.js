@@ -53,8 +53,8 @@ async function deleteEmployee(req, res, next) {
     try {
         const id = req.params.id;
         const data = { deleted_by: req.userIdToken}
-        await service.deleteEmployee(id,data);
-        res.status(204).send();
+        result = await service.deleteEmployee(id,data);
+        res.status(200).json(result);
     } catch (error) {
         next(error);
     }  
