@@ -118,6 +118,40 @@ class ServicesService {
         }
     }
 
+    async postCategory(data) {
+        const connection = await getConnection();
+        await connection.beginTransaction();
+
+        try {
+            const [existingCategory] = await connection.query(
+                `SELECT id FROM service_categories WHERE name = ? AND deleted_at IS NULL`,
+                [data.name]
+            );
+
+            if (existingCategory.length > 0) {
+                const error = new Error('Category with this name already exists');
+                error.status = 409;
+                throw error;
+            }
+
+            const [result] = await connection.query(
+                `INSERT INTO service_categories (name, created_by, created_at) VALUES (?, ?, NOW())`,
+                [data.name, data.created_by]
+            );
+
+            await connection.commit();
+
+            return {
+                message: 'Category created successfully',
+                data: { id: result.insertId, ...data }
+            };
+
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        }
+    }
+
     async putService(id, data) {
         const connection = await getConnection();
         await connection.beginTransaction();
