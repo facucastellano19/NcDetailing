@@ -2,21 +2,34 @@ const getConnection = require('../database/mysql');
 
 class ServicesService {
 
-    async getServices() {
+    async getServices(name, category) {
         const connection = await getConnection();
-        const query = `
-            SELECT 
-                s.id, 
-                s.name, 
-                s.description, 
-                s.price, 
+        let query = `
+            SELECT
+                s.id,
+                s.name,
+                s.description,
+                s.price,
                 sc.name AS category
             FROM services s
             JOIN service_categories sc ON s.category_id = sc.id
             WHERE s.deleted_at IS NULL
-            ORDER BY s.id
         `;
-        const [services] = await connection.query(query);
+        const params = [];
+
+        if (name) {
+            query += ` AND s.name LIKE ?`;
+            params.push(`%${name}%`);
+        }
+
+        if (category) {
+            query += ` AND sc.name LIKE ?`;
+            params.push(`%${category}%`);
+        }
+
+        query += ` ORDER BY s.id`;
+
+        const [services] = await connection.query(query, params);
         return {
             message: 'Services retrieved successfully',
             data: services

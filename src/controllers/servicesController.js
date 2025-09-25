@@ -3,7 +3,8 @@ const service = new servicesService();
 
 async function getServices(req, res, next) {
     try {
-        const services = await service.getServices();
+        const { name, category } = req.query;
+        const services = await service.getServices(name, category);
         res.json(services);
     } catch (error) {
         next(error);

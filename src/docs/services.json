@@ -7,6 +7,22 @@
         "security": [
           { "bearerAuth": [] }
         ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Filter services by name (partial match)",
+            "required": false,
+            "schema": { "type": "string", "example": "Wash" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filter services by category name (partial match)",
+            "required": false,
+            "schema": { "type": "string", "example": "Exterior" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Services retrieved successfully",
