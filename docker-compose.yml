@@ -1,8 +1,31 @@
+version: '3.8'
+
 services:
+  db:
+    image: mysql:8.0
+    container_name: ncdetailing-db-1
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: ncdetailing-app-1
     ports:
       - "3000:3000"
     environment:
@@ -13,20 +36,11 @@ services:
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - .:/app
       - /app/node_modules
-
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE}
-    ports:
-      - "3307:3306"
-    volumes:
-      - db_data:/var/lib/mysql
 
 volumes:
   db_data:
