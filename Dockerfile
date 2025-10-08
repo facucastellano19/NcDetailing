@@ -1,20 +1,20 @@
-# Usa una imagen base de Node.js
+# Use a Node.js base image
 FROM node:20-alpine
 
-# Establece el directorio de trabajo en el contenedor
+# Set the working directory in the container
 WORKDIR /app
 
-# Copia los archivos package.json y package-lock.json
+# Copy package.json and package-lock.json files
 COPY package*.json ./
 
-# Instala las dependencias de la aplicación
+# Install application dependencies
 RUN npm install
 
-# Expone el puerto en el que se ejecuta la aplicación
+# Expose the port the application runs on
 EXPOSE 3000
 
-# Copia el resto del código de la aplicación al contenedor
+# Copy the rest of the application code to the container
 COPY . .
 
-# Define el comando para iniciar la aplicación
+# Define the command to start the application
 CMD ["npm", "start"]
