@@ -151,14 +151,13 @@ class ProductsService {
             // Update product
             await connection.query(
                 `UPDATE products
-                 SET name = ?, description = ?, price = ?, stock = ?, min_stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
+                 SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
                  WHERE id = ?`,
                 [
                     data.name ?? product.name,
                     data.description ?? product.description,
                     data.price ?? product.price,
                     data.stock ?? product.stock,
-                    data.min_stock ?? product.min_stock,
                     data.category_id ?? product.category_id,
                     data.updated_by ?? product.updated_by,
                     id
@@ -173,7 +172,6 @@ class ProductsService {
                 description: data.description ?? product.description,
                 price: data.price ?? product.price,
                 stock: data.stock ?? product.stock,
-                min_stock: data.min_stock ?? product.min_stock,
                 category_id: data.category_id ?? product.category_id,
                 updated_by: data.updated_by ?? product.updated_by
             };
@@ -188,6 +186,41 @@ class ProductsService {
         }
     }
 
+    async updateMinStock(id, min_stock, updated_by) {
+        const connection = await getConnection();
+        await connection.beginTransaction();
+
+        try {
+            // Check if product exists
+            const [existingProducts] = await connection.query(
+                `SELECT id FROM products WHERE deleted_at IS NULL AND id = ?`,
+                [id]
+            );
+            if (!existingProducts[0]) {
+                const error = new Error('Product not found');
+                error.status = 404;
+                throw error;
+            }
+
+            // Update min_stock
+            await connection.query(
+                `UPDATE products
+                 SET min_stock = ?, updated_by = ?, updated_at = NOW()
+                 WHERE id = ?`,
+                [min_stock, updated_by, id]
+            );
+
+            await connection.commit();
+
+            return {
+                message: 'Product min_stock updated successfully',
+                data: { id, min_stock, updated_by }
+            };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        }
+    }
 
     async deleteProduct(id, data) {
         const connection = await getConnection();
