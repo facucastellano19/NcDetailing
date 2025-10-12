@@ -105,3 +105,22 @@ CREATE TABLE services (
     deleted_by INT NULL,
     CONSTRAINT fk_service_category FOREIGN KEY (category_id) REFERENCES service_categories(id)
 );
+
+-- =========================================
+-- PRODUCTS
+-- =========================================
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+
+    -- Audit fields
+    created_at DATETIME NULL,
+    updated_at DATETIME NULL,
+    deleted_at DATETIME NULL,
+    created_by INT NULL,
+    updated_by INT NULL,
+    deleted_by INT NULL
+);
