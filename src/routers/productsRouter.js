@@ -1,6 +1,6 @@
 const express = require('express')
-const { getProducts, getProductById, postProduct, putProduct, deleteProduct } = require('../controllers/productsController');
-const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema } = require('../schemas/productsSchema');
+const { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory } = require('../controllers/productsController');
+const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema } = require('../schemas/productsSchema');
 const { validatorHandler } = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 const { valid } = require('joi');
@@ -33,5 +33,11 @@ productsRouter.delete('/:id',
     validatorHandler(deleteProductSchema, 'params'),
     deleteProduct)
 
+
+productsRouter.post('/category',
+    checkRole(1),
+    validatorHandler(postCategorySchema, 'body'),
+    postCategory
+)
 
 module.exports = productsRouter

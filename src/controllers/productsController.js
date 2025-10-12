@@ -51,8 +51,18 @@ async function deleteProduct(req, res, next) {
         res.status(200).json(result);
     } catch (error) {
         next(error);
-    }  
+    }
 }
 
+async function postCategory(req, res, next) {
+    try {
+        const data = req.body;
+        data.created_by = req.userIdToken;
+        const newCategory = await service.postCategory(data);
+        res.status(201).json(newCategory);
+    } catch (error) {
+        next(error);
+    }
+}
 
-module.exports = { getProducts, getProductById, postProduct, putProduct, deleteProduct }
+module.exports = { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory }

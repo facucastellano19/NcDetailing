@@ -125,7 +125,7 @@ class ProductsService {
             // Check if category exists 
             if (data.category_id) {
                 const [existingCategories] = await connection.query(
-                    `SELECT id FROM categories WHERE id = ? AND deleted_at IS NULL`,
+                    `SELECT id FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
                     [data.category_id]
                 );
                 if (existingCategories.length === 0) {
@@ -210,7 +210,43 @@ class ProductsService {
         }
     }
 
+    async postCategory(data) {
+        const connection = await getConnection();
+        await connection.beginTransaction();
+
+        try {
+            const [existingCategory] = await connection.query(
+                `SELECT id FROM product_categories WHERE name = ? AND deleted_at IS NULL`,
+                [data.name]
+            );
+
+            if (existingCategory.length > 0) {
+                const error = new Error('Category with this name already exists');
+                error.status = 400;
+                throw error;
+            }
+
+            const [result] = await connection.query(
+                `INSERT INTO product_categories (name, created_at, created_by)
+                 VALUES (?, NOW(), ?)`,
+                [data.name, data.created_by]
+            );
+
+            await connection.commit();
+
+            return {
+                message: 'Category created successfully',
+                data: { id: result.insertId, ...data }
+            };
+
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        }
+    }
+
 
 }
+
 
 module.exports = ProductsService;
