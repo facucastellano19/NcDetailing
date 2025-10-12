@@ -7,6 +7,22 @@
         "security": [
           { "bearerAuth": [] }
         ],
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "example": 1 },
+            "description": "Filter products by category ID"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "example": "Shampoo" },
+            "description": "Filter products by name (partial match)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Products retrieved successfully",

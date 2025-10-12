@@ -3,7 +3,8 @@ const service = new ProductsService();
 
 async function getProducts(req, res, next) {
     try {
-        const products = await service.getProducts();
+        const { name, category_id } = req.query;
+        const products = await service.getProducts({ name, category_id });
         res.json(products);
     } catch (error) {
         next(error);

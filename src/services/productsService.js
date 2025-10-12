@@ -6,16 +6,29 @@ class ProductsService {
         return product.stock <= product.min_stock;
     }
 
-    async getProducts() {
+    async getProducts(params) {
         const connection = await getConnection();
-        const query = `
+        let query = `
             SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
             FROM products p
             INNER JOIN product_categories pc ON p.category_id = pc.id
             WHERE p.deleted_at IS NULL
-            ORDER BY p.name
         `;
-        const [products] = await connection.query(query);
+        const queryParams = [];
+
+        if (params.category_id) {
+            query += ` AND p.category_id = ?`;
+            queryParams.push(params.category_id);
+        }
+
+        if (params.name) {
+            query += ` AND p.name LIKE ?`;
+            queryParams.push(`%${params.name}%`);
+        }
+
+        query += ` ORDER BY p.name`;
+
+        const [products] = await connection.query(query, queryParams);
 
         // Map products to include lowStock property using private method
         const productsWithStockStatus = products.map(p => ({

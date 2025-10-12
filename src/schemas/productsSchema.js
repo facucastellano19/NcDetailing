@@ -110,6 +110,19 @@ module.exports = {
     postProductSchema,
     putProductSchema,
     deleteProductSchema,
-    postCategorySchema
+    postCategorySchema,
+    getProductsSchema
 };
+
+const getProductsSchema = Joi.object({
+    category_id: Joi.number().integer().positive().optional().messages({
+        'number.base': 'Category ID must be a number',
+        'number.integer': 'Category ID must be an integer',
+        'number.positive': 'Category ID must be a positive number'
+    }),
+    name: Joi.string().max(100).optional().messages({
+        'string.base': 'Name must be text',
+        'string.max': 'Name cannot exceed 100 characters'
+    })
+});
 

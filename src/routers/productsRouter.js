@@ -1,6 +1,6 @@
 const express = require('express')
 const { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory } = require('../controllers/productsController');
-const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema } = require('../schemas/productsSchema');
+const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema, getProductsSchema } = require('../schemas/productsSchema');
 const { validatorHandler } = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 const { valid } = require('joi');
@@ -10,6 +10,7 @@ productsRouter.use(express.json())
 
 productsRouter.get('/',
     checkRole(1),
+    validatorHandler(getProductsSchema, 'query'),
     getProducts)
 
 productsRouter.get('/:id',
