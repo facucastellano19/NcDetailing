@@ -78,4 +78,13 @@ async function postCategory(req, res, next) {
     }
 }
 
-module.exports = { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory }
+async function getCategories(req, res, next) {
+    try {
+        const categories = await service.getCategories();
+        res.json(categories);
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory, getCategories }

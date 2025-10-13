@@ -291,6 +291,16 @@ class ProductsService {
         }
     }
 
+    async getCategories() {
+        const connection = await getConnection();
+        const [categories] = await connection.query(
+            `SELECT id, name FROM product_categories WHERE deleted_at IS NULL ORDER BY name`
+        );
+        return {
+            message: 'Categories retrieved successfully',
+            data: categories
+        };
+    }
 
 }
 

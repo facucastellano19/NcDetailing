@@ -14,7 +14,7 @@ const products = require(path.join(__dirname, '../docs/products.json'));
 // Combine them into a single Swagger document
 const swaggerDocument = {
   openapi: "3.0.3",
-  info: users.info, // podés personalizar
+  info: users.info,
   paths: {
     ...users.paths,
     ...employees.paths,
