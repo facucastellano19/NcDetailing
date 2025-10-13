@@ -7,6 +7,7 @@ const clientsRouter = require('./routers/clientsRouter');
 const employeesRouter = require('./routers/employeesRouter');
 const { logError, errorHandler } = require('./middlewares/errorHandler');
 const servicesRouter = require('./routers/servicesRouter');
+const productsRouter = require('./routers/productsRouter');
 
 app.use('/api/services',servicesRouter)
 
@@ -17,6 +18,8 @@ app.use('/api/docs', docsRouter);
 app.use('/api/users',usersRouter)
 
 app.use('/api/employees',employeesRouter)
+
+app.use('/api/products',productsRouter);
 
 app.get('/', (req, res) => {
     res.send('Sistema de ventas NcDetailing activo')

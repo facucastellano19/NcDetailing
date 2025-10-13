@@ -105,3 +105,42 @@ CREATE TABLE services (
     deleted_by INT NULL,
     CONSTRAINT fk_service_category FOREIGN KEY (category_id) REFERENCES service_categories(id)
 );
+
+-- =========================================
+-- CATEGORIES
+-- =========================================
+CREATE TABLE product_categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    
+    -- Audit fields
+    created_at DATETIME NULL,
+    updated_at DATETIME NULL,
+    deleted_at DATETIME NULL,
+    created_by INT NULL,
+    updated_by INT NULL,
+    deleted_by INT NULL
+);
+
+-- =========================================
+-- PRODUCTS
+-- =========================================
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    category_id INT NOT NULL,
+    min_stock INT NOT NULL DEFAULT 0,
+
+    created_at DATETIME NULL,
+    updated_at DATETIME NULL,
+    deleted_at DATETIME NULL,
+    created_by INT NULL,
+    updated_by INT NULL,
+    deleted_by INT NULL,
+
+    CONSTRAINT fk_products_category
+        FOREIGN KEY (category_id) REFERENCES product_categories(id)
+);
