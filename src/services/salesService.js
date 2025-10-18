@@ -2,12 +2,13 @@ const getConnection = require('../database/mysql');
 
 class SalesService {
 
-    async getSalesProducts() {
+    async getSalesProducts(params = {}) {
         let connection;
         try {
             connection = await getConnection();
+            const { clientName, startDate, endDate, paymentStatusId } = params;
 
-            const [salesProducts] = await connection.query(`
+            let query = `
                 SELECT 
                     s.id AS sale_id,
                     CONCAT(c.first_name, ' ', c.last_name) AS client_name,
@@ -27,9 +28,33 @@ class SalesService {
                 JOIN payment_methods pm ON s.payment_method_id = pm.id
                 JOIN payment_status ps ON s.payment_status_id = ps.id
                 WHERE s.sale_type_id = 2
-                  AND s.deleted_at IS NULL
-                ORDER BY s.created_at DESC, s.id DESC
-            `);
+                  AND s.deleted_at IS NULL`;
+
+            const queryParams = [];
+
+            if (clientName) {
+                query += ` AND CONCAT(c.first_name, ' ', c.last_name) LIKE ?`;
+                queryParams.push(`%${clientName}%`);
+            }
+
+            if (startDate) {
+                query += ` AND s.created_at >= ?`;
+                queryParams.push(startDate);
+            }
+
+            if (endDate) {
+                query += ` AND s.created_at <= ?`;
+                queryParams.push(`${endDate} 23:59:59`); // Include the whole day
+            }
+
+            if (paymentStatusId) {
+                query += ` AND s.payment_status_id = ?`;
+                queryParams.push(paymentStatusId);
+            }
+
+            query += ` ORDER BY s.created_at DESC, s.id DESC`;
+
+            const [salesProducts] = await connection.query(query, queryParams);
 
             const salesMap = new Map();
 
@@ -65,7 +90,6 @@ class SalesService {
             }
         }
     }
-
 
     async postSaleProducts(data) {
         let connection;
