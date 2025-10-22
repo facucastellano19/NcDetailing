@@ -1,6 +1,6 @@
 const express = require('express');
-const { getSalesProducts, postSaleProducts } = require('../controllers/salesController');
-//const { postSaleProductsSchema } = require('../schemas/salesSchema');
+const { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices } = require('../controllers/salesController');
+const { postSaleProductsSchema, postSaleServicesSchema } = require('../schemas/salesSchema');
 const { validatorHandler } = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 
@@ -14,8 +14,19 @@ salesRouter.get('/products',
 
 salesRouter.post('/products',
     checkRole(1),
-    // validatorHandler(postSaleProductsSchema, 'body'), // Descomenta cuando crees el schema de validación
+    validatorHandler(postSaleProductsSchema, 'body'),
     postSaleProducts
+);
+
+salesRouter.get('/services',
+    checkRole(1),
+    getSalesServices
+);
+
+salesRouter.post('/services',
+    checkRole(1),
+    validatorHandler(postSaleServicesSchema, 'body'),
+    postSalesServices
 );
 
 module.exports = salesRouter;

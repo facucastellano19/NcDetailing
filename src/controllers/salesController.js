@@ -22,4 +22,26 @@ async function postSaleProducts(req, res, next) {
     }
 }
 
-module.exports = { getSalesProducts,postSaleProducts }
+async function getSalesServices(req, res, next) {
+    try {
+        const { clientName, startDate, endDate, paymentStatusId } = req.query;
+        const salesServices = await service.getSalesServices({ clientName, startDate, endDate, paymentStatusId });
+        res.json(salesServices);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function postSalesServices(req, res, next) {
+    try {
+        const data = req.body;
+        data.created_by = req.userIdToken;
+        const newSaleServices = await service.postSalesServices(data);
+        res.status(201).json(newSaleServices);
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+module.exports = { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices }
