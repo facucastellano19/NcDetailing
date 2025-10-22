@@ -35,7 +35,7 @@ salesRouter.get('/payment-methods',
 );
 
 salesRouter.patch('/:id/payment-status',
-    checkRole(1, 2),
+    checkRole(1,2),
     validatorHandler(updatePaymentStatusSchema, 'body'),
     updatePaymentStatus
 );

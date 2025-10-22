@@ -1,0 +1,402 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Sales API",
+        "version": "1.0.0",
+        "description": "API for managing product and service sales."
+    },
+    "servers": [
+        { "url": "http://localhost:3000" }
+    ],
+    "paths": {
+        "/api/sales/products": {
+            "get": {
+                "tags": ["Sales"],
+                "summary": "Get a list of product sales",
+                "description": "Retrieves a list of all product sales, with optional filtering by client name, date range, and payment status. Requires 'admin' or 'employee' role.",
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    {
+                        "name": "clientName",
+                        "in": "query",
+                        "description": "Filter sales by client's full name (partial match).",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "startDate",
+                        "in": "query",
+                        "description": "Filter sales from this date onwards (YYYY-MM-DD).",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "endDate",
+                        "in": "query",
+                        "description": "Filter sales up to this date (YYYY-MM-DD).",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "paymentStatusId",
+                        "in": "query",
+                        "description": "Filter sales by payment status ID (1: Pendiente, 2: Pagado, 3: Cancelado).",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of product sales.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/SaleProductListResponse" }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" }
+                }
+            },
+            "post": {
+                "tags": ["Sales"],
+                "summary": "Create a new product sale",
+                "description": "Creates a new sale record for one or more products. It validates stock and updates it accordingly. Requires 'admin' or 'employee' role.",
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/SaleProductCreation" }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Sale created successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/SaleCreationSuccessResponse" }
+                            }
+                        }
+                    },
+                    "400": { "$ref": "#/components/responses/BadRequestError" },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" },
+                    "404": { "$ref": "#/components/responses/NotFoundError" }
+                }
+            }
+        },
+        "/api/sales/services": {
+            "get": {
+                "tags": ["Sales"],
+                "summary": "Get a list of service sales",
+                "description": "Retrieves a list of all service sales, with optional filtering by client name, date range, and payment status. Requires 'admin' or 'employee' role.",
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    {
+                        "name": "clientName",
+                        "in": "query",
+                        "description": "Filter sales by client's full name (partial match).",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "startDate",
+                        "in": "query",
+                        "description": "Filter sales from this date onwards (YYYY-MM-DD).",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "endDate",
+                        "in": "query",
+                        "description": "Filter sales up to this date (YYYY-MM-DD).",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "paymentStatusId",
+                        "in": "query",
+                        "description": "Filter sales by payment status ID (1: Pendiente, 2: Pagado, 3: Cancelado).",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of service sales.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/SaleServiceListResponse" }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" }
+                }
+            },
+            "post": {
+                "tags": ["Sales"],
+                "summary": "Create a new service sale",
+                "description": "Creates a new sale record for one or more services linked to a client and their vehicle. Requires 'admin' or 'employee' role.",
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/SaleServiceCreation" }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Sale created successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/SaleCreationSuccessResponse" }
+                            }
+                        }
+                    },
+                    "400": { "$ref": "#/components/responses/BadRequestError" },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" },
+                    "404": { "$ref": "#/components/responses/NotFoundError" }
+                }
+            }
+        },
+        "/api/sales/payment-methods": {
+            "get": {
+                "tags": ["Sales"],
+                "summary": "Get available payment methods",
+                "description": "Retrieves a list of all available payment methods (e.g., 'Efectivo', 'Transferencia'). Requires 'admin' or 'employee' role.",
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": {
+                        "description": "A list of payment methods.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/PaymentMethodListResponse" }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" }
+                }
+            }
+        },
+        "/api/sales/{id}/payment-status": {
+            "patch": {
+                "tags": ["Sales"],
+                "summary": "Update a sale's payment status",
+                "description": "Updates the payment status of a specific sale (e.g., from 'Pendiente' to 'Pagado'). Requires 'admin' or 'employee' role.",
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The ID of the sale to update.",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/UpdatePaymentStatus" }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment status updated successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/UpdatePaymentStatusResponse" }
+                            }
+                        }
+                    },
+                    "400": { "$ref": "#/components/responses/BadRequestError" },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" },
+                    "404": { "$ref": "#/components/responses/NotFoundError" }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        },
+        "schemas": {
+            "SaleProductCreation": {
+                "type": "object",
+                "properties": {
+                    "client_id": { "type": "integer", "example": 1 },
+                    "payment_method_id": { "type": "integer", "example": 1 },
+                    "payment_status_id": { "type": "integer", "example": 1, "description": "Defaults to 1 ('Pendiente') if not provided." },
+                    "observations": { "type": "string", "example": "Client requested gift wrap." },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "product_id": { "type": "integer", "example": 5 },
+                                "quantity": { "type": "integer", "example": 2 }
+                            }
+                        }
+                    }
+                },
+                "required": ["client_id", "payment_method_id", "products"]
+            },
+            "SaleServiceCreation": {
+                "type": "object",
+                "properties": {
+                    "client_id": { "type": "integer", "example": 1 },
+                    "vehicle_id": { "type": "integer", "example": 1 },
+                    "payment_method_id": { "type": "integer", "example": 2 },
+                    "payment_status_id": { "type": "integer", "example": 1, "description": "Defaults to 1 ('Pendiente') if not provided." },
+                    "observations": { "type": "string", "example": "Pay special attention to the front bumper." },
+                    "services": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "service_id": { "type": "integer", "example": 3 }
+                            }
+                        }
+                    }
+                },
+                "required": ["client_id", "vehicle_id", "payment_method_id", "services"]
+            },
+            "UpdatePaymentStatus": {
+                "type": "object",
+                "properties": {
+                    "payment_status_id": { "type": "integer", "example": 2, "description": "1: Pendiente, 2: Pagado, 3: Cancelado" }
+                },
+                "required": ["payment_status_id"]
+            },
+            "SaleCreationSuccessResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string" },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "sale_id": { "type": "integer" },
+                            "total": { "type": "number", "format": "float" }
+                        }
+                    }
+                }
+            },
+            "SaleProductListResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string" },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "sale_id": { "type": "integer" },
+                                "client_name": { "type": "string" },
+                                "sale_total": { "type": "number", "format": "float" },
+                                "payment_method": { "type": "string" },
+                                "payment_status": { "type": "string" },
+                                "created_at": { "type": "string", "format": "date-time" },
+                                "products": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "product_id": { "type": "integer" },
+                                            "product_name": { "type": "string" },
+                                            "quantity": { "type": "integer" },
+                                            "price": { "type": "number", "format": "float" },
+                                            "subtotal": { "type": "number", "format": "float" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SaleServiceListResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string" },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "sale_id": { "type": "integer" },
+                                "client_name": { "type": "string" },
+                                "sale_total": { "type": "number", "format": "float" },
+                                "payment_method": { "type": "string" },
+                                "payment_status": { "type": "string" },
+                                "created_at": { "type": "string", "format": "date-time" },
+                                "services": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "service_id": { "type": "integer" },
+                                            "service_name": { "type": "string" },
+                                            "price": { "type": "number", "format": "float" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "PaymentMethodListResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string" },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": { "type": "integer" },
+                                "name": { "type": "string" }
+                            }
+                        }
+                    }
+                }
+            },
+            "UpdatePaymentStatusResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string" },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "sale_id": { "type": "integer" },
+                            "payment_status_id": { "type": "integer" }
+                        }
+                    }
+                }
+            }
+        },
+        "responses": {
+            "UnauthorizedError": {
+                "description": "Authentication error. Token is invalid or missing.",
+                "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Your session has expired. Please log in again." } } } } }
+            },
+            "ForbiddenError": {
+                "description": "Authorization error. User does not have the required permissions.",
+                "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Access denied. You do not have the required permissions." } } } } }
+            },
+            "BadRequestError": {
+                "description": "Bad Request. The request body or parameters are invalid.",
+                "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Client ID is a required field." } } } } }
+            },
+            "NotFoundError": {
+                "description": "Not Found. The requested resource does not exist.",
+                "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Sale not found" } } } } }
+            }
+        }
+    }
+}
