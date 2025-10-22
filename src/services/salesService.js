@@ -389,6 +389,24 @@ class SalesService {
         }
     }
 
+    async getPaymentMethods() {
+        let connection
+        try {
+            connection = await getConnection();
+            const [methods] = await connection.query(
+                `SELECT id, name FROM payment_methods`
+            );
+            return {
+                message: 'Payment methods retrieved successfully',
+                data: methods
+            };
+        } catch (error) {
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+
+    }
 }
 
 module.exports = SalesService;

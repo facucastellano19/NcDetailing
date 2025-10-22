@@ -43,5 +43,14 @@ async function postSalesServices(req, res, next) {
     }
 }
 
+async function getPaymentMethods(req, res, next) {
+    try {
+        const paymentMethods = await service.getPaymentMethods();
+        res.json(paymentMethods);
+    } catch (error) {
+        next(error);
+    }
+}
 
-module.exports = { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices }
+
+module.exports = { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices, getPaymentMethods }
