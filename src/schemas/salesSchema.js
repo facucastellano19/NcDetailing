@@ -90,5 +90,14 @@ const postSaleServicesSchema = Joi.object({
     })
 });
 
+const updatePaymentStatusSchema = Joi.object({
+    payment_status_id: Joi.number().integer().positive().valid(1, 2, 3).required().messages({
+        'number.base': 'Payment status ID must be a number.',
+        'number.integer': 'Payment status ID must be an integer.',
+        'number.positive': 'Payment status ID must be a positive number.',
+        'any.only': 'Payment status ID must be one of [1, 2, 3].',
+        'any.required': 'Payment status ID is a required field.'
+    })
+});
 
-module.exports = { postSaleProductsSchema, postSaleServicesSchema };
+module.exports = { postSaleProductsSchema, postSaleServicesSchema, updatePaymentStatusSchema };

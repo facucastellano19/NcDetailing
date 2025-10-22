@@ -52,5 +52,18 @@ async function getPaymentMethods(req, res, next) {
     }
 }
 
+async function updatePaymentStatus(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { payment_status_id } = req.body;
+        const updated_by = req.userIdToken;
 
-module.exports = { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices, getPaymentMethods }
+        const result = await service.updatePaymentStatus(id, { payment_status_id, updated_by });
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+module.exports = { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices, getPaymentMethods, updatePaymentStatus }
