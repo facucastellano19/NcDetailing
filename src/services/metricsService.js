@@ -71,8 +71,6 @@ class MetricsService {
         [startDate, endDate, breakdownType]
       );
 
-      // MySQL devuelve múltiples result sets en un array
-      // results[0], results[1], results[2], etc.
       const [
         generalMetrics,
         rawBreakdownData, // Raw data from DB, might have gaps
