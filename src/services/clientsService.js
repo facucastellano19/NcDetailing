@@ -193,6 +193,7 @@ class ClientsService {
 
         } catch (err) {
             await connection.rollback();
+            throw err; // Re-throw the error so the controller can catch it
         }
     }
 
