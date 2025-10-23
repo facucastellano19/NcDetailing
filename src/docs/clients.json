@@ -149,6 +149,35 @@
           "404": { "description": "Client not found" }
         }
       }
+    },
+    "/api/clients/{id}/history": {
+      "get": {
+        "summary": "Get purchase history for a client",
+        "tags": ["Clients"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client purchase history retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ClientPurchaseHistoryResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Client not found" }
+        }
+      }
     }
   },
   "components": {
@@ -252,6 +281,65 @@
           "data": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/Vehicle" }
+          }
+        }
+      },
+      "ClientPurchaseHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Client purchase history retrieved successfully" },
+          "data": { "$ref": "#/components/schemas/ClientPurchaseHistory" }
+        }
+      },
+      "ClientPurchaseHistory": {
+        "type": "object",
+        "properties": {
+          "servicesHistory": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ServiceSaleHistoryItem" }
+          },
+          "productsHistory": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ProductSaleHistoryItem" }
+          }
+        }
+      },
+      "ServiceSaleHistoryItem": {
+        "type": "object",
+        "properties": {
+          "sale_id": { "type": "integer", "example": 1 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "sale_total": { "type": "number", "format": "float", "example": 85.00 },
+          "vehicle_info": { "type": "string", "example": "Ford Focus (AA123BC)" },
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "example": "Basic Wash" },
+                "price": { "type": "number", "format": "float", "example": 25.00 }
+              }
+            }
+          }
+        }
+      },
+      "ProductSaleHistoryItem": {
+        "type": "object",
+        "properties": {
+          "sale_id": { "type": "integer", "example": 4 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "sale_total": { "type": "number", "format": "float", "example": 35.99 },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "example": "HydroSlick Ceramic Wax" },
+                "quantity": { "type": "integer", "example": 1 },
+                "unit_price": { "type": "number", "format": "float", "example": 35.99 },
+                "subtotal": { "type": "number", "format": "float", "example": 35.99 }
+              }
+            }
           }
         }
       }

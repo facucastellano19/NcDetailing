@@ -32,6 +32,16 @@ async function getClientVehicles(req, res, next) {
 
 }
 
+async function getClientPurchaseHistory(req, res, next) {
+    try {
+        const { id } = req.params;
+        const history = await service.getClientPurchaseHistory(id);
+        res.json(history);
+    } catch (error) {
+        next(error);
+    }
+}
+
 async function postClient(req, res, next) {
     try {
         const data = req.body;
@@ -57,4 +67,4 @@ async function putClient(req, res, next) {
 
 
 
-module.exports = { getClients, getClientById, postClient, putClient, getClientVehicles }
+module.exports = { getClients, getClientById, postClient, putClient, getClientVehicles, getClientPurchaseHistory }
