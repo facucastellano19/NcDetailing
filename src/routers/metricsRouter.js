@@ -7,7 +7,7 @@ const { getDashboardMetricsSchema } = require('../schemas/metricsSchema');
 const router = express.Router();
 
 router.get('/dashboard', 
-    checkRole(1, 2), // Allow both admin and employee
+    checkRole(1),
     validatorHandler(getDashboardMetricsSchema, 'query'),
     getDashboardMetrics);
 
