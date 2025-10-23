@@ -262,3 +262,132 @@ CREATE TABLE sale_products (
     FOREIGN KEY (sale_id) REFERENCES sales(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
+
+-- =========================================
+-- STORED PROCEDURE: sp_dashboard_metrics
+-- =========================================
+DROP PROCEDURE IF EXISTS sp_dashboard_metrics;
+DELIMITER $$
+
+CREATE PROCEDURE sp_dashboard_metrics(
+    IN in_start_date DATETIME,
+    IN in_end_date DATETIME,
+    IN in_breakdown_type ENUM('daily','monthly')
+)
+BEGIN
+    -- General metrics (totals)
+    SELECT 
+        COALESCE(SUM(s.total), 0) AS totalRevenue,
+        COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN s.total ELSE 0 END), 0) AS totalProductRevenue,
+        COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN s.total ELSE 0 END), 0) AS totalServiceRevenue,
+        COALESCE(COUNT(DISTINCT s.client_id), 0) AS totalClientsAttended
+    FROM sales s
+    WHERE s.deleted_at IS NULL
+      AND s.payment_status_id = 2
+      AND s.created_at BETWEEN in_start_date AND in_end_date;
+
+    -- Breakdown (daily or monthly)
+    IF in_breakdown_type = 'daily' THEN
+        SELECT 
+            DATE(s.created_at) AS breakdown_key,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN 1 ELSE 0 END), 0) AS products,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN 1 ELSE 0 END), 0) AS services
+        FROM sales s
+        WHERE s.deleted_at IS NULL
+          AND s.payment_status_id = 2
+          AND s.created_at BETWEEN in_start_date AND in_end_date
+        GROUP BY DATE(s.created_at)
+        ORDER BY DATE(s.created_at);
+
+        SELECT 
+            DATE(s.created_at) AS breakdown_key,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN s.total ELSE 0 END), 0) AS products,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN s.total ELSE 0 END), 0) AS services
+        FROM sales s
+        WHERE s.deleted_at IS NULL
+          AND s.payment_status_id = 2
+          AND s.created_at BETWEEN in_start_date AND in_end_date
+        GROUP BY DATE(s.created_at)
+        ORDER BY DATE(s.created_at);
+    ELSE
+        SELECT 
+            DATE_FORMAT(s.created_at, '%Y-%m') AS breakdown_key,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN 1 ELSE 0 END), 0) AS products,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN 1 ELSE 0 END), 0) AS services
+        FROM sales s
+        WHERE s.deleted_at IS NULL
+          AND s.payment_status_id = 2
+          AND s.created_at BETWEEN in_start_date AND in_end_date
+        GROUP BY DATE_FORMAT(s.created_at, '%Y-%m')
+        ORDER BY breakdown_key;
+
+        SELECT 
+            DATE_FORMAT(s.created_at, '%Y-%m') AS breakdown_key,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN s.total ELSE 0 END), 0) AS products,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN s.total ELSE 0 END), 0) AS services
+        FROM sales s
+        WHERE s.deleted_at IS NULL
+          AND s.payment_status_id = 2
+          AND s.created_at BETWEEN in_start_date AND in_end_date
+        GROUP BY DATE_FORMAT(s.created_at, '%Y-%m')
+        ORDER BY breakdown_key;
+    END IF;
+
+    -- Top 5 products
+    SELECT 
+        p.name AS product,
+        COALESCE(SUM(sp.quantity), 0) AS quantity
+    FROM sale_products sp
+    JOIN products p ON p.id = sp.product_id
+    JOIN sales s ON s.id = sp.sale_id
+    WHERE s.deleted_at IS NULL
+      AND s.payment_status_id = 2
+      AND s.created_at BETWEEN in_start_date AND in_end_date
+    GROUP BY p.name
+    HAVING quantity > 0
+    ORDER BY quantity DESC
+    LIMIT 5;
+
+    -- Top 5 services
+    SELECT 
+        sv.name AS service,
+        COALESCE(COUNT(*), 0) AS quantity
+    FROM sale_services ss
+    JOIN services sv ON sv.id = ss.service_id
+    JOIN sales s ON s.id = ss.sale_id
+    WHERE s.deleted_at IS NULL
+      AND s.payment_status_id = 2
+      AND s.created_at BETWEEN in_start_date AND in_end_date
+    GROUP BY sv.name
+    HAVING quantity > 0
+    ORDER BY quantity DESC
+    LIMIT 5;
+
+    -- Top 5 clients
+    SELECT 
+        CONCAT(c.first_name, ' ', c.last_name) AS client,
+        COALESCE(SUM(s.total), 0) AS total
+    FROM sales s
+    JOIN clients c ON c.id = s.client_id
+    WHERE s.deleted_at IS NULL
+      AND s.payment_status_id = 2
+      AND s.created_at BETWEEN in_start_date AND in_end_date
+    GROUP BY c.id
+    HAVING total > 0
+    ORDER BY total DESC
+    LIMIT 5;
+
+    -- Revenue by payment method
+    SELECT 
+        pm.name AS method,
+        COALESCE(SUM(s.total), 0) AS total
+    FROM payment_methods pm
+    LEFT JOIN sales s ON pm.id = s.payment_method_id
+        AND s.deleted_at IS NULL
+        AND s.payment_status_id = 2
+        AND s.created_at BETWEEN in_start_date AND in_end_date
+    GROUP BY pm.name
+    ORDER BY pm.id;
+END$$
+
+DELIMITER ;
