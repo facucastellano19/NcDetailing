@@ -8,13 +8,14 @@ const employeesRouter = require('./routers/employeesRouter');
 const servicesRouter = require('./routers/servicesRouter');
 const productsRouter = require('./routers/productsRouter');
 const salesRouter = require('./routers/salesRouter');
+const metricsRouter = require('./routers/metricsRouter');
 
 // Middlewares
 const { logError, errorHandler } = require('./middlewares/errorHandler');
 
 const app = express();
 app.use(express.json());
-
+app.use('/api/metrics', metricsRouter);
 app.use('/api/sales', salesRouter);
 
 app.use('/api/services',servicesRouter)

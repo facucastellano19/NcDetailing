@@ -288,43 +288,25 @@ BEGIN
 
     -- Breakdown (daily or monthly)
     IF in_breakdown_type = 'daily' THEN
-        SELECT 
+        SELECT
             DATE(s.created_at) AS breakdown_key,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN 1 ELSE 0 END), 0) AS products,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN 1 ELSE 0 END), 0) AS services
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN 1 ELSE 0 END), 0) AS service_count,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN 1 ELSE 0 END), 0) AS product_count,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN s.total ELSE 0 END), 0) AS service_revenue,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN s.total ELSE 0 END), 0) AS product_revenue
         FROM sales s
         WHERE s.deleted_at IS NULL
           AND s.payment_status_id = 2
           AND s.created_at BETWEEN in_start_date AND in_end_date
-        GROUP BY DATE(s.created_at)
-        ORDER BY DATE(s.created_at);
-
-        SELECT 
-            DATE(s.created_at) AS breakdown_key,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN s.total ELSE 0 END), 0) AS products,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN s.total ELSE 0 END), 0) AS services
-        FROM sales s
-        WHERE s.deleted_at IS NULL
-          AND s.payment_status_id = 2
-          AND s.created_at BETWEEN in_start_date AND in_end_date
-        GROUP BY DATE(s.created_at)
-        ORDER BY DATE(s.created_at);
-    ELSE
-        SELECT 
-            DATE_FORMAT(s.created_at, '%Y-%m') AS breakdown_key,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN 1 ELSE 0 END), 0) AS products,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN 1 ELSE 0 END), 0) AS services
-        FROM sales s
-        WHERE s.deleted_at IS NULL
-          AND s.payment_status_id = 2
-          AND s.created_at BETWEEN in_start_date AND in_end_date
-        GROUP BY DATE_FORMAT(s.created_at, '%Y-%m')
+        GROUP BY breakdown_key
         ORDER BY breakdown_key;
-
-        SELECT 
+    ELSE
+        SELECT
             DATE_FORMAT(s.created_at, '%Y-%m') AS breakdown_key,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN s.total ELSE 0 END), 0) AS products,
-            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN s.total ELSE 0 END), 0) AS services
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN 1 ELSE 0 END), 0) AS service_count,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN 1 ELSE 0 END), 0) AS product_count,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 1 THEN s.total ELSE 0 END), 0) AS service_revenue,
+            COALESCE(SUM(CASE WHEN s.sale_type_id = 2 THEN s.total ELSE 0 END), 0) AS product_revenue
         FROM sales s
         WHERE s.deleted_at IS NULL
           AND s.payment_status_id = 2
@@ -351,7 +333,7 @@ BEGIN
     -- Top 5 services
     SELECT 
         sv.name AS service,
-        COALESCE(COUNT(*), 0) AS quantity
+        COUNT(sv.id) AS quantity
     FROM sale_services ss
     JOIN services sv ON sv.id = ss.service_id
     JOIN sales s ON s.id = ss.sale_id

@@ -1,0 +1,95 @@
+{
+    "paths": {
+        "/api/metrics/dashboard": {
+            "get": {
+            "summary": "Get dashboard metrics (totals, breakdowns, top lists)",
+                "tags": [
+                    "Metrics"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "startDate",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "description": "Start date for a custom range (YYYY-MM-DD). Must be used with 'endDate' and cannot be used with 'filter'."
+                    },
+                    {
+                        "in": "query",
+                        "name": "endDate",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "description": "End date for a custom range (YYYY-MM-DD). Must be used with 'startDate' and cannot be used with 'filter'."
+                    },
+                    {
+                        "in": "query",
+                        "name": "filter",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "weekly",
+                                "monthly",
+                                "yearly"
+                            ],
+                            "default": "monthly"
+                        },
+                        "description": "Predefined filter for the date range. Cannot be used with 'startDate' or 'endDate'. Defaults to 'monthly'."
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dashboard metrics retrieved successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dashboard metrics retrieved successfully"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DashboardMetrics"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequestError"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "DashboardMetrics": {
+                "type": "object",
+                "properties": {
+                    "range": { "type": "object" },
+                    "general": { "type": "object" },
+                    "breakdown": { "type": "array", "items": { "type": "object" } },
+                    "top": { "type": "object" },
+                    "paymentMethods": { "type": "array", "items": { "type": "object" } }
+                }
+            }
+        }
+    }
+}
