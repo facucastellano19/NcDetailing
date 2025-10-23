@@ -4,9 +4,10 @@ class ClientsService {
 
     async getClients(search) {
         const connection = await getConnection();
-
         let query = `
-            SELECT DISTINCT c.id, c.first_name, c.last_name, c.email, c.phone
+            SELECT 
+                c.id, c.first_name, c.last_name, c.email, c.phone,
+                v.id AS vehicle_id, v.brand, v.model, v.year, v.color, v.license_plate
             FROM clients c
             LEFT JOIN vehicles v ON c.id = v.client_id AND v.deleted_at IS NULL
         `;
@@ -31,7 +32,36 @@ class ClientsService {
 
         query += ` ORDER BY c.id`;
 
-        const [clients] = await connection.query(query, queryParams);
+        const [rows] = await connection.query(query, queryParams);
+
+        // Process rows to group vehicles by client
+        const clientsMap = new Map();
+
+        rows.forEach(row => {
+            if (!clientsMap.has(row.id)) {
+                clientsMap.set(row.id, {
+                    id: row.id,
+                    first_name: row.first_name,
+                    last_name: row.last_name,
+                    email: row.email,
+                    phone: row.phone,
+                    vehicles: []
+                });
+            }
+
+            if (row.vehicle_id) { // Only add vehicle if it exists (not NULL from LEFT JOIN)
+                clientsMap.get(row.id).vehicles.push({
+                    id: row.vehicle_id,
+                    brand: row.brand,
+                    model: row.model,
+                    year: row.year,
+                    color: row.color,
+                    license_plate: row.license_plate
+                });
+            }
+        });
+
+        const clients = Array.from(clientsMap.values());
 
         return {
             message: 'Clients retrieved successfully',
