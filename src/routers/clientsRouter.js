@@ -1,5 +1,5 @@
 const express = require('express')
-const { getClients, getClientById, postClient, putClient, getClientVehicles } = require('../controllers/clientsController');
+const { getClients, getClientById, postClient, putClient, getClientVehicles, getClientPurchaseHistory } = require('../controllers/clientsController');
 const {getClientByIdSchema, putClientSchema, postClientSchema} = require('../schemas/clientsSchemas');
 const {validatorHandler} = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
@@ -20,6 +20,11 @@ clientsRouter.get('/:id/vehicles',
     checkRole(1,2),
     validatorHandler(getClientByIdSchema, 'params'),    
     getClientVehicles)
+
+clientsRouter.get('/:id/history',
+    checkRole(1,2),
+    validatorHandler(getClientByIdSchema, 'params'),
+    getClientPurchaseHistory)
 
 clientsRouter.post('/',
     checkRole(1,2),

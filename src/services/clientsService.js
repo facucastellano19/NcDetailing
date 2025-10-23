@@ -331,7 +331,89 @@ class ClientsService {
         }
     }
 
+    async getClientPurchaseHistory(clientId) {
+        const connection = await getConnection();
+        try {
+            // Check if client exists
+            const [clientExists] = await connection.query(
+                `SELECT id FROM clients WHERE id = ?`,
+                [clientId]
+            );
 
+            if (clientExists.length === 0) {
+                const error = new Error('Client not found');
+                error.status = 404;
+                throw error;
+            }
+
+            // Get Service Sales History
+            const [serviceSalesRows] = await connection.query(`
+                SELECT 
+                    s.id AS sale_id,
+                    s.created_at,
+                    s.total AS sale_total,
+                    sv.name AS service_name,
+                    ss.price AS service_price,
+                    CONCAT(v.brand, ' ', v.model, ' (', v.license_plate, ')') AS vehicle_info
+                FROM sales s
+                JOIN sale_services ss ON s.id = ss.sale_id
+                JOIN services sv ON ss.service_id = sv.id
+                JOIN vehicles v ON s.vehicle_id = v.id
+                WHERE s.client_id = ? AND s.sale_type_id = 1 AND s.deleted_at IS NULL
+                ORDER BY s.created_at DESC;
+            `, [clientId]);
+
+            const servicesHistoryMap = new Map();
+            serviceSalesRows.forEach(row => {
+                if (!servicesHistoryMap.has(row.sale_id)) {
+                    servicesHistoryMap.set(row.sale_id, {
+                        sale_id: row.sale_id,
+                        created_at: row.created_at,
+                        sale_total: row.sale_total,
+                        vehicle_info: row.vehicle_info,
+                        services: []
+                    });
+                }
+                servicesHistoryMap.get(row.sale_id).services.push({ name: row.service_name, price: row.service_price });
+            });
+
+            // Get Product Sales History
+            const [productSalesRows] = await connection.query(`
+                SELECT 
+                    s.id AS sale_id,
+                    s.created_at,
+                    s.total AS sale_total,
+                    p.name AS product_name,
+                    sp.quantity,
+                    sp.price AS unit_price,
+                    sp.subtotal
+                FROM sales s
+                JOIN sale_products sp ON s.id = sp.sale_id
+                JOIN products p ON sp.product_id = p.id
+                WHERE s.client_id = ? AND s.sale_type_id = 2 AND s.deleted_at IS NULL
+                ORDER BY s.created_at DESC;
+            `, [clientId]);
+
+            const productsHistoryMap = new Map();
+            productSalesRows.forEach(row => {
+                if (!productsHistoryMap.has(row.sale_id)) {
+                    productsHistoryMap.set(row.sale_id, { sale_id: row.sale_id, created_at: row.created_at, sale_total: row.sale_total, products: [] });
+                }
+                productsHistoryMap.get(row.sale_id).products.push({ name: row.product_name, quantity: row.quantity, unit_price: row.unit_price, subtotal: row.subtotal });
+            });
+
+            return {
+                message: 'Client purchase history retrieved successfully',
+                data: {
+                    servicesHistory: Array.from(servicesHistoryMap.values()),
+                    productsHistory: Array.from(productsHistoryMap.values())
+                }
+            };
+        } finally {
+            if (connection) connection.release();
+        }
+    }
 }
+
 
 module.exports = ClientsService;
