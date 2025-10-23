@@ -237,20 +237,6 @@ class ClientsService {
                     throw error;
                 }
 
-                // Ensure at least one vehicle remains
-                const remainingVehicles = data.vehicles.filter(v => !v.deleted).length;
-                const [currentVehicles] = await connection.query(
-                    `SELECT id FROM vehicles WHERE client_id = ? AND deleted_at IS NULL`,
-                    [id]
-                );
-                const totalRemaining = remainingVehicles + currentVehicles.filter(cv => !data.vehicles.some(v => v.id === cv.id && v.deleted)).length;
-
-                if (totalRemaining === 0) {
-                    const error = new Error('A client must have at least one vehicle');
-                    error.status = 400;
-                    throw error;
-                }
-
                 // Insert, update, or soft delete vehicles
                 for (let vehicle of data.vehicles) {
                     if (vehicle.id) {
