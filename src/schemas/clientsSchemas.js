@@ -62,11 +62,8 @@ const postClientSchema = Joi.object({
   created_by: Joi.number().integer().forbidden().messages({
     'any.unknown': 'Cannot send created_by field'
   }),
-  vehicles: Joi.array().items(vehiclePostSchema).min(1).required().messages({
-    'array.base': 'Must send an array of vehicles',
-    'array.min': 'Must add at least one vehicle',
-    'any.required': 'Must add at least one vehicle'
-  })
+  // Vehicles are now optional
+  vehicles: Joi.array().items(vehiclePostSchema).optional()
 });
 
 // Vehículo PUT
