@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 
 // Routers
 const usersRouter = require('./routers/usersRouter');
@@ -15,19 +16,16 @@ const { logError, errorHandler } = require('./middlewares/errorHandler');
 
 const app = express();
 app.use(express.json());
+
+app.use(cors());
+
 app.use('/api/metrics', metricsRouter);
 app.use('/api/sales', salesRouter);
-
 app.use('/api/services',servicesRouter)
-
 app.use('/api/clients',clientsRouter)
-
 app.use('/api/docs', docsRouter);
-
 app.use('/api/users',usersRouter)
-
 app.use('/api/employees',employeesRouter)
-
 app.use('/api/products',productsRouter);
 
 app.get('/', (req, res) => {
