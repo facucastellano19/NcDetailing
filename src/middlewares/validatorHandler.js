@@ -1,16 +1,14 @@
 function validatorHandler(schema, property) {
-  return (req, res, next) => {
-    const data = req[property];
-    const result = schema.validate(data);
-
-    if (result.error) {
-      const error = new Error(result.error.details[0].message);
-      error.status = 400;
-      return next(error); 
+  return async (req, res, next) => {
+    try {
+      const data = req[property];
+      await schema.validateAsync(data, { abortEarly: false }); // validación completa
+      next();
+    } catch (err) {
+      err.status = 400; // Bad Request
+      next(err);        // Pasa al middleware global
     }
-
-    next();
   };
 }
 
-module.exports = { validatorHandler }
+module.exports = { validatorHandler };
