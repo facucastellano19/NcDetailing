@@ -10,6 +10,7 @@ const servicesRouter = require('./routers/servicesRouter');
 const productsRouter = require('./routers/productsRouter');
 const salesRouter = require('./routers/salesRouter');
 const metricsRouter = require('./routers/metricsRouter');
+const homeRouter = require('./routers/homeRouter');
 
 // Middlewares
 const { logError, errorHandler } = require('./middlewares/errorHandler');
@@ -19,6 +20,7 @@ app.use(express.json());
 
 app.use(cors());
 
+app.use('/api/home', homeRouter);
 app.use('/api/metrics', metricsRouter);
 app.use('/api/sales', salesRouter);
 app.use('/api/services',servicesRouter)

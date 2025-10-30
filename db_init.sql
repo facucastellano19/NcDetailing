@@ -6,7 +6,7 @@ CREATE TABLE roles (
     name VARCHAR(50) UNIQUE NOT NULL
 );
 
--- Insertar roles iniciales
+-- Insert initial roles
 INSERT INTO roles (name) VALUES ('admin'), ('employee');
 
 -- =========================================
@@ -107,7 +107,7 @@ CREATE TABLE services (
 );
 
 -- =========================================
--- CATEGORIES
+-- PAYMENT STATUS
 -- =========================================
 CREATE TABLE payment_status (
     id TINYINT AUTO_INCREMENT PRIMARY KEY,
@@ -156,7 +156,7 @@ VALUES ('Servicio'), ('Producto');
 CREATE TABLE product_categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
-    
+
     -- Audit fields
     created_at DATETIME NULL,
     updated_at DATETIME NULL,
@@ -196,9 +196,9 @@ CREATE TABLE sales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     client_id INT NOT NULL,
     vehicle_id INT NULL,
-    sale_type_id TINYINT NOT NULL,         -- 1 = Servicio, 2 = Producto
-    service_status_id TINYINT NOT NULL DEFAULT 1,  -- Pendiente
-    payment_status_id TINYINT NOT NULL DEFAULT 1,  -- Pendiente
+    sale_type_id TINYINT NOT NULL,         -- 1 = Service, 2 = Product
+    service_status_id TINYINT NOT NULL DEFAULT 1,  -- Pending
+    payment_status_id TINYINT NOT NULL DEFAULT 1,  -- Pending
     payment_method_id TINYINT NOT NULL,
     total DECIMAL(12,2) NOT NULL DEFAULT 0,
     observations TEXT,
@@ -370,6 +370,89 @@ BEGIN
         AND s.created_at BETWEEN in_start_date AND in_end_date
     GROUP BY pm.name
     ORDER BY pm.id;
+END$$
+
+DELIMITER ;
+
+-- =========================================
+-- STORED PROCEDURE: sp_home_dashboard
+-- =========================================
+DROP PROCEDURE IF EXISTS sp_home_dashboard;
+DELIMITER $$
+
+CREATE PROCEDURE sp_home_dashboard()
+BEGIN
+    -- Define the range for the last 7 days
+    SET @endDate = NOW();
+    SET @startDate = DATE_SUB(@endDate, INTERVAL 7 DAY);
+
+    -- 1. Summary metrics (last 7 days)
+    SELECT
+        COUNT(s.id) AS totalSales,
+        COALESCE(SUM(CASE WHEN s.payment_status_id = 2 THEN 1 ELSE 0 END), 0) AS confirmedPayments,
+        COALESCE(SUM(CASE WHEN s.payment_status_id = 1 THEN 1 ELSE 0 END), 0) AS pendingPayments
+    FROM sales s
+    WHERE s.deleted_at IS NULL
+      AND s.created_at BETWEEN @startDate AND @endDate;
+
+    -- 2. Recent service activity (last 5 service sales)
+    SELECT
+        s.id AS sale_id,
+        CONCAT(c.first_name, ' ', c.last_name) AS client_name,
+        TIME(s.created_at) AS sale_time,
+        s.total AS sale_total,
+        ss_status.name AS service_status,
+        GROUP_CONCAT(sv.name SEPARATOR ', ') AS services -- Group service names
+    FROM (
+        -- Subquery to get the last 5 service sales
+        SELECT * FROM sales
+        WHERE sale_type_id = 1 AND deleted_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT 5
+    ) AS s
+    JOIN clients c ON s.client_id = c.id
+    JOIN service_status ss_status ON s.service_status_id = ss_status.id
+    JOIN sale_services ss ON s.id = ss.sale_id
+    JOIN services sv ON ss.service_id = sv.id
+    GROUP BY s.id, client_name, sale_time, sale_total, service_status
+    ORDER BY s.created_at DESC;
+
+
+    -- 3. Recent product activity (last 5 product sales)
+    -- First, we get the main sales
+    SELECT
+        s.id AS sale_id,
+        CONCAT(c.first_name, ' ', c.last_name) AS client_name,
+        TIME(s.created_at) AS sale_time,
+        s.total AS sale_total,
+        ps.name AS payment_status
+    FROM sales s
+    JOIN clients c ON s.client_id = c.id
+    JOIN payment_status ps ON s.payment_status_id = ps.id
+    WHERE s.sale_type_id = 2 AND s.deleted_at IS NULL
+    ORDER BY s.created_at DESC
+    LIMIT 5;
+
+    -- 4. Detailed products for those recent product sales
+    SELECT
+        sp.sale_id,
+        p.name AS product_name,
+        sp.quantity,
+        sp.price AS unit_price,
+        sp.subtotal
+    FROM sale_products sp
+    JOIN products p ON sp.product_id = p.id
+    WHERE sp.sale_id IN ( -- We use a derived table to bypass the "LIMIT in subquery" restriction
+        SELECT sale_id FROM (
+            -- We ensure that we only bring products from the 5 most recent product sales
+            SELECT id AS sale_id
+            FROM sales
+            WHERE sale_type_id = 2 AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 5
+        ) AS recent_sales
+    );
+
 END$$
 
 DELIMITER ;
