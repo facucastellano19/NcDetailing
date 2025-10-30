@@ -3,124 +3,140 @@ const getConnection = require('../database/mysql');
 class ClientsService {
 
     async getClients(search) {
-        const connection = await getConnection();
-        let query = `
-            SELECT 
-                c.id, c.first_name, c.last_name, c.email, c.phone,
-                v.id AS vehicle_id, v.brand, v.model, v.year, v.color, v.license_plate
-            FROM clients c
-            LEFT JOIN vehicles v ON c.id = v.client_id AND v.deleted_at IS NULL
-        `;
-        const queryParams = [];
-
-        if (search) {
-            const searchTerm = `%${search}%`;
-            query += `
-                WHERE c.first_name LIKE ?
-                   OR c.last_name LIKE ?
-                   OR c.email LIKE ?
-                   OR c.phone LIKE ?
-                   OR v.brand LIKE ?
-                   OR v.model LIKE ?
-                   OR v.license_plate LIKE ?
+        let connection;
+        try {
+            connection = await getConnection();
+            let query = `
+                SELECT 
+                    c.id, c.first_name, c.last_name, c.email, c.phone,
+                    v.id AS vehicle_id, v.brand, v.model, v.year, v.color, v.license_plate
+                FROM clients c
+                LEFT JOIN vehicles v ON c.id = v.client_id AND v.deleted_at IS NULL
             `;
-            queryParams.push(
-                searchTerm, searchTerm, searchTerm, searchTerm,
-                searchTerm, searchTerm, searchTerm
-            );
+            const queryParams = [];
+
+            if (search) {
+                const searchTerm = `%${search}%`;
+                query += `
+                    WHERE c.first_name LIKE ?
+                       OR c.last_name LIKE ?
+                       OR c.email LIKE ?
+                       OR c.phone LIKE ?
+                       OR v.brand LIKE ?
+                       OR v.model LIKE ?
+                       OR v.license_plate LIKE ?
+                `;
+                queryParams.push(
+                    searchTerm, searchTerm, searchTerm, searchTerm,
+                    searchTerm, searchTerm, searchTerm
+                );
+            }
+
+            query += ` ORDER BY c.id`;
+
+            const [rows] = await connection.query(query, queryParams);
+
+            // Process rows to group vehicles by client
+            const clientsMap = new Map();
+
+            rows.forEach(row => {
+                if (!clientsMap.has(row.id)) {
+                    clientsMap.set(row.id, {
+                        id: row.id,
+                        first_name: row.first_name,
+                        last_name: row.last_name,
+                        email: row.email,
+                        phone: row.phone,
+                        vehicles: []
+                    });
+                }
+
+                if (row.vehicle_id) { // Only add vehicle if it exists (not NULL from LEFT JOIN)
+                    clientsMap.get(row.id).vehicles.push({
+                        id: row.vehicle_id,
+                        brand: row.brand,
+                        model: row.model,
+                        year: row.year,
+                        color: row.color,
+                        license_plate: row.license_plate
+                    });
+                }
+            });
+
+            const clients = Array.from(clientsMap.values());
+
+            return {
+                message: 'Clients retrieved successfully',
+                data: clients
+            };
+        } finally {
+            if (connection) connection.release();
         }
-
-        query += ` ORDER BY c.id`;
-
-        const [rows] = await connection.query(query, queryParams);
-
-        // Process rows to group vehicles by client
-        const clientsMap = new Map();
-
-        rows.forEach(row => {
-            if (!clientsMap.has(row.id)) {
-                clientsMap.set(row.id, {
-                    id: row.id,
-                    first_name: row.first_name,
-                    last_name: row.last_name,
-                    email: row.email,
-                    phone: row.phone,
-                    vehicles: []
-                });
-            }
-
-            if (row.vehicle_id) { // Only add vehicle if it exists (not NULL from LEFT JOIN)
-                clientsMap.get(row.id).vehicles.push({
-                    id: row.vehicle_id,
-                    brand: row.brand,
-                    model: row.model,
-                    year: row.year,
-                    color: row.color,
-                    license_plate: row.license_plate
-                });
-            }
-        });
-
-        const clients = Array.from(clientsMap.values());
-
-        return {
-            message: 'Clients retrieved successfully',
-            data: clients
-        };
     }
 
     async getClientVehicles(id) {
-        const connection = await getConnection();
+        let connection;
+        try {
+            connection = await getConnection();
 
-        const [client] = await connection.query(
-            `SELECT id, first_name, last_name FROM clients WHERE id = ?`,
-            [id]
-        );
+            const [client] = await connection.query(
+                `SELECT id, first_name, last_name FROM clients WHERE id = ?`,
+                [id]
+            );
 
-        if (!client[0]) {
-            const error = new Error('Client not found');
-            error.status = 404;
-            throw error;
+            if (!client[0]) {
+                const error = new Error('Client not found');
+                error.status = 404;
+                throw error;
+            }
+
+            const [vehicles] = await connection.query(
+                `SELECT id, brand, model, year, color, license_plate 
+                 FROM vehicles 
+                 WHERE client_id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+
+            return {
+                message: 'Vehicles retrieved successfully',
+                data: vehicles
+            };
+        } finally {
+            if (connection) connection.release();
         }
-
-        const [vehicles] = await connection.query(
-            `SELECT id, brand, model, year, color, license_plate 
-             FROM vehicles 
-             WHERE client_id = ? AND deleted_at IS NULL`,
-            [id]
-        );
-
-        return {
-            message: 'Vehicles retrieved successfully',
-            data: vehicles
-        };
     }
 
     async getClientById(id) {
-        const connection = await getConnection();
-        const query = `SELECT id, first_name, last_name, email, phone
-            FROM clients WHERE id = ?`
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `SELECT id, first_name, last_name, email, phone
+                FROM clients WHERE id = ?`
 
-        const [clients] = await connection.query(query, [id]);
-        const client = clients[0]
+            const [clients] = await connection.query(query, [id]);
+            const client = clients[0]
 
-        if (!client) {
-            const error = new Error('Client not found');
-            error.status = 404;
-            throw error;
+            if (!client) {
+                const error = new Error('Client not found');
+                error.status = 404;
+                throw error;
+            }
+
+            return {
+                message: 'Client retrieved successfully',
+                data: client
+            };
+        } finally {
+            if (connection) connection.release();
         }
-
-        return {
-            message: 'Client retrieved successfully',
-            data: client
-        };
     }
 
     async postClient(data) {
-        const connection = await getConnection();
-        await connection.beginTransaction(); // Start transaction
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction(); // Start transaction
+
             // Verify unique email and phone
             const [clients] = await connection.query(
                 `SELECT id FROM clients WHERE email = ? OR phone = ?`,
@@ -194,15 +210,18 @@ class ClientsService {
         } catch (err) {
             await connection.rollback();
             throw err; // Re-throw the error so the controller can catch it
+        } finally {
+            if (connection) connection.release();
         }
     }
 
 
     async putClient(id, data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             // Verify if client exists
             const [queryClientExists] = await connection.query(
                 `SELECT * FROM clients WHERE id = ?`,
@@ -328,6 +347,8 @@ class ClientsService {
         } catch (err) {
             await connection.rollback();
             throw err;
+        } finally {
+            if (connection) connection.release();
         }
     }
 

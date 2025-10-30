@@ -7,75 +7,86 @@ class ProductsService {
     }
 
     async getProducts(params) {
-        const connection = await getConnection();
-        let query = `
-            SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
-            FROM products p
-            INNER JOIN product_categories pc ON p.category_id = pc.id
-            WHERE p.deleted_at IS NULL
-        `;
-        const queryParams = [];
+        let connection;
+        try {
+            connection = await getConnection();
+            let query = `
+                SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
+                FROM products p
+                INNER JOIN product_categories pc ON p.category_id = pc.id
+                WHERE p.deleted_at IS NULL
+            `;
+            const queryParams = [];
 
-        if (params.category_id) {
-            query += ` AND p.category_id = ?`;
-            queryParams.push(params.category_id);
+            if (params.category_id) {
+                query += ` AND p.category_id = ?`;
+                queryParams.push(params.category_id);
+            }
+
+            if (params.name) {
+                query += ` AND p.name LIKE ?`;
+                queryParams.push(`%${params.name}%`);
+            }
+
+            query += ` ORDER BY p.name`;
+
+            const [products] = await connection.query(query, queryParams);
+
+            // Map products to include lowStock property using private method
+            const productsWithStockStatus = products.map(p => ({
+                ...p,
+                lowStock: this.#calculateLowStock(p)
+            }));
+
+            return {
+                message: 'Products retrieved successfully',
+                data: productsWithStockStatus
+            };
+        } finally {
+            if (connection) connection.release();
         }
-
-        if (params.name) {
-            query += ` AND p.name LIKE ?`;
-            queryParams.push(`%${params.name}%`);
-        }
-
-        query += ` ORDER BY p.name`;
-
-        const [products] = await connection.query(query, queryParams);
-
-        // Map products to include lowStock property using private method
-        const productsWithStockStatus = products.map(p => ({
-            ...p,
-            lowStock: this.#calculateLowStock(p)
-        }));
-
-        return {
-            message: 'Products retrieved successfully',
-            data: productsWithStockStatus
-        };
     }
 
     // Get a single product by ID with category and low stock status
     async getProductById(id) {
-        const connection = await getConnection();
-        const query = `
-            SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
-            FROM products p
-            INNER JOIN product_categories pc ON p.category_id = pc.id
-            WHERE p.deleted_at IS NULL AND p.id = ?
-        `;
-        const [productQueryResult] = await connection.query(query, [id]);
-        const product = productQueryResult[0];
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `
+                SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
+                FROM products p
+                INNER JOIN product_categories pc ON p.category_id = pc.id
+                WHERE p.deleted_at IS NULL AND p.id = ?
+            `;
+            const [productQueryResult] = await connection.query(query, [id]);
+            const product = productQueryResult[0];
 
-        if (!product) {
-            const error = new Error('Product not found');
-            error.status = 404;
-            throw error;
+            if (!product) {
+                const error = new Error('Product not found');
+                error.status = 404;
+                throw error;
+            }
+
+            const productWithStockStatus = {
+                ...product,
+                lowStock: this.#calculateLowStock(product)
+            };
+
+            return {
+                message: 'Product retrieved successfully',
+                data: productWithStockStatus
+            };
+        } finally {
+            if (connection) connection.release();
         }
-
-        const productWithStockStatus = {
-            ...product,
-            lowStock: this.#calculateLowStock(product)
-        };
-
-        return {
-            message: 'Product retrieved successfully',
-            data: productWithStockStatus
-        };
     }
 
     async postProduct(data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             // Check if product with same name already exists
             const [existingProducts] = await connection.query(
                 `SELECT id FROM products WHERE name = ? AND deleted_at IS NULL`,
@@ -114,15 +125,18 @@ class ProductsService {
         } catch (error) {
             await connection.rollback();
             throw error;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     // Update an existing product
     async putProduct(id, data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             // Check if product exists
             const [existingProducts] = await connection.query(
                 `SELECT * FROM products WHERE deleted_at IS NULL AND id = ?`,
@@ -183,14 +197,17 @@ class ProductsService {
         } catch (error) {
             await connection.rollback();
             throw error;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     async updateMinStock(id, min_stock, updated_by) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             // Check if product exists
             const [existingProducts] = await connection.query(
                 `SELECT id FROM products WHERE deleted_at IS NULL AND id = ?`,
@@ -219,14 +236,17 @@ class ProductsService {
         } catch (error) {
             await connection.rollback();
             throw error;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     async deleteProduct(id, data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             const [existingProducts] = await connection.query(
                 `SELECT id, name FROM products WHERE deleted_at IS NULL AND id = ?`,
                 [id]
@@ -253,14 +273,17 @@ class ProductsService {
         } catch (error) {
             await connection.rollback();
             throw error;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     async postCategory(data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             const [existingCategory] = await connection.query(
                 `SELECT id FROM product_categories WHERE name = ? AND deleted_at IS NULL`,
                 [data.name]
@@ -288,18 +311,25 @@ class ProductsService {
         } catch (error) {
             await connection.rollback();
             throw error;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     async getCategories() {
-        const connection = await getConnection();
-        const [categories] = await connection.query(
-            `SELECT id, name FROM product_categories WHERE deleted_at IS NULL ORDER BY name`
-        );
-        return {
-            message: 'Categories retrieved successfully',
-            data: categories
-        };
+        let connection;
+        try {
+            connection = await getConnection();
+            const [categories] = await connection.query(
+                `SELECT id, name FROM product_categories WHERE deleted_at IS NULL ORDER BY name`
+            );
+            return {
+                message: 'Categories retrieved successfully',
+                data: categories
+            };
+        } finally {
+            if (connection) connection.release();
+        }
     }
 
 }
