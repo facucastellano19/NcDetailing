@@ -3,89 +3,104 @@ const getConnection = require('../database/mysql');
 class ServicesService {
 
     async getServices(name, category) {
-        const connection = await getConnection();
-        let query = `
-            SELECT
-                s.id,
-                s.name,
-                s.description,
-                s.price,
-                sc.name AS category
-            FROM services s
-            JOIN service_categories sc ON s.category_id = sc.id
-            WHERE s.deleted_at IS NULL
-        `;
-        const params = [];
+        let connection;
+        try {
+            connection = await getConnection();
+            let query = `
+                SELECT
+                    s.id,
+                    s.name,
+                    s.description,
+                    s.price,
+                    sc.name AS category
+                FROM services s
+                JOIN service_categories sc ON s.category_id = sc.id
+                WHERE s.deleted_at IS NULL
+            `;
+            const params = [];
 
-        if (name) {
-            query += ` AND s.name LIKE ?`;
-            params.push(`%${name}%`);
+            if (name) {
+                query += ` AND s.name LIKE ?`;
+                params.push(`%${name}%`);
+            }
+
+            if (category) {
+                query += ` AND sc.name LIKE ?`;
+                params.push(`%${category}%`);
+            }
+
+            query += ` ORDER BY s.id`;
+
+            const [services] = await connection.query(query, params);
+            return {
+                message: 'Services retrieved successfully',
+                data: services
+            };
+        } finally {
+            if (connection) connection.release();
         }
-
-        if (category) {
-            query += ` AND sc.name LIKE ?`;
-            params.push(`%${category}%`);
-        }
-
-        query += ` ORDER BY s.id`;
-
-        const [services] = await connection.query(query, params);
-        return {
-            message: 'Services retrieved successfully',
-            data: services
-        };
     }
 
     async getServiceById(id) {
-        const connection = await getConnection();
-        const query = `
-            SELECT 
-                s.id, 
-                s.category_id,
-                s.name, 
-                s.description, 
-                s.price, 
-                sc.name AS category_name
-            FROM services s
-            JOIN service_categories sc ON s.category_id = sc.id
-            WHERE s.deleted_at IS NULL AND s.id = ?
-        `;
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `
+                SELECT 
+                    s.id, 
+                    s.category_id,
+                    s.name, 
+                    s.description, 
+                    s.price, 
+                    sc.name AS category_name
+                FROM services s
+                JOIN service_categories sc ON s.category_id = sc.id
+                WHERE s.deleted_at IS NULL AND s.id = ?
+            `;
 
-        const [services] = await connection.query(query, [id]);
-        const service = services[0];
+            const [services] = await connection.query(query, [id]);
+            const service = services[0];
 
-        if (!service) {
-            const error = new Error('Service not found');
-            error.status = 404;
-            throw error;
+            if (!service) {
+                const error = new Error('Service not found');
+                error.status = 404;
+                throw error;
+            }
+
+            return {
+                message: 'Service retrieved successfully',
+                data: service
+            };
+        } finally {
+            if (connection) connection.release();
         }
-
-        return {
-            message: 'Service retrieved successfully',
-            data: service
-        };
     }
 
     async getCategories() {
-        const connection = await getConnection();
-        const query = `
-            SELECT id, name
-            FROM service_categories
-            WHERE deleted_at IS NULL
-            ORDER BY name
-        `;
-        const [categories] = await connection.query(query);
-        return {
-            message: 'Service categories retrieved successfully',
-            data: categories
-        };
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `
+                SELECT id, name
+                FROM service_categories
+                WHERE deleted_at IS NULL
+                ORDER BY name
+            `;
+            const [categories] = await connection.query(query);
+            return {
+                message: 'Service categories retrieved successfully',
+                data: categories
+            };
+        } finally {
+            if (connection) connection.release();
+        }
     }
 
     async postService(data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
 
             const [existingService] = await connection.query(
                 `SELECT id FROM services WHERE name = ? AND deleted_at IS NULL`,
@@ -115,14 +130,17 @@ class ServicesService {
         } catch (err) {
             await connection.rollback();
             throw err;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     async postCategory(data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             const [existingCategory] = await connection.query(
                 `SELECT id FROM service_categories WHERE name = ? AND deleted_at IS NULL`,
                 [data.name]
@@ -149,14 +167,17 @@ class ServicesService {
         } catch (err) {
             await connection.rollback();
             throw err;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     async putService(id, data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             const [existingService] = await connection.query(
                 `SELECT * FROM services WHERE id = ? AND deleted_at IS NULL`,
                 [id]
@@ -217,14 +238,17 @@ class ServicesService {
         } catch (err) {
             await connection.rollback();
             throw err;
+        } finally {
+            if (connection) connection.release();
         }
     }
 
     async deleteService(id, data) {
-        const connection = await getConnection();
-        await connection.beginTransaction();
-
+        let connection;
         try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
             const [existingService] = await connection.query(
                 `SELECT id FROM services WHERE id = ? AND deleted_at IS NULL`,
                 [id]
@@ -258,6 +282,8 @@ class ServicesService {
         } catch (err) {
             await connection.rollback();
             throw err;
+        } finally {
+            if (connection) connection.release();
         }
     }
 }
