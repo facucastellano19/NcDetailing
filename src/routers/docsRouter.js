@@ -12,6 +12,7 @@ const services = require(path.join(__dirname, '../docs/services.json'));
 const products = require(path.join(__dirname, '../docs/products.json'));
 const sales = require(path.join(__dirname, '../docs/sales.json'));
 const metrics = require(path.join(__dirname, '../docs/metrics.json'));
+const home = require(path.join(__dirname, '../docs/home.json'));
 
 // Combine them into a single Swagger document
 const swaggerDocument = {
@@ -24,7 +25,8 @@ const swaggerDocument = {
     ...services.paths,
     ...products.paths,
     ...sales.paths,
-    ...metrics.paths
+    ...metrics.paths,
+    ...home.paths
   },
   components: {
     schemas: {
@@ -34,7 +36,8 @@ const swaggerDocument = {
       ...services.components.schemas,
       ...products.components.schemas,
       ...sales.components.schemas,
-      ...metrics.components.schemas
+      ...metrics.components.schemas,
+      ...home.components.schemas
     },
     securitySchemes: {
       ...users.components.securitySchemes
