@@ -78,6 +78,17 @@ async function postCategory(req, res, next) {
     }
 }
 
+async function deleteCategory(req, res, next) {
+    try {
+        const id = req.params.id;
+        const data = { deleted_by: req.userIdToken}
+        const result = await service.deleteCategory(id,data);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
 async function getCategories(req, res, next) {
     try {
         const categories = await service.getCategories();
@@ -87,4 +98,4 @@ async function getCategories(req, res, next) {
     }
 }
 
-module.exports = { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory, getCategories }
+module.exports = { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory, deleteCategory, getCategories }
