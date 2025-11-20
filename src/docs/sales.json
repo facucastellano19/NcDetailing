@@ -181,7 +181,7 @@
             "patch": {
                 "tags": ["Sales"],
                 "summary": "Update a sale's payment status",
-                "description": "Updates the payment status of a specific sale (e.g., from 'Pendiente' to 'Pagado'). Requires 'admin' or 'employee' role.",
+                "description": "Updates the payment status of a specific sale. Requires 'admin' or 'employee' role. Possible statuses: 1: Pendiente, 2: Pagado, 3: Cancelado.",
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
                     {
@@ -206,6 +206,45 @@
                         "content": {
                             "application/json": {
                                 "schema": { "$ref": "#/components/schemas/UpdatePaymentStatusResponse" }
+                            }
+                        }
+                    },
+                    "400": { "$ref": "#/components/responses/BadRequestError" },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" },
+                    "404": { "$ref": "#/components/responses/NotFoundError" }
+                }
+            }
+        },
+        "/api/sales/services/{id}/status": {
+            "patch": {
+                "tags": ["Sales"],
+                "summary": "Update a service sale's operational status",
+                "description": "Updates the operational status of a specific service sale. Requires 'admin' or 'employee' role. Possible statuses: 1: Pendiente, 2: En proceso, 3: Completado, 4: Cancelado.",
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The ID of the service sale to update.",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/UpdateServiceStatus" }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Service status updated successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/UpdateServiceStatusResponse" }
                             }
                         }
                     },
@@ -269,9 +308,16 @@
             "UpdatePaymentStatus": {
                 "type": "object",
                 "properties": {
-                    "payment_status_id": { "type": "integer", "example": 2, "description": "1: Pendiente, 2: Pagado, 3: Cancelado" }
+                    "payment_status_id": { "type": "integer", "example": 2, "description": "ID del estado de pago. 1: Pendiente, 2: Pagado, 3: Cancelado." }
                 },
                 "required": ["payment_status_id"]
+            },
+            "UpdateServiceStatus": {
+                "type": "object",
+                "properties": {
+                    "service_status_id": { "type": "integer", "example": 2, "description": "ID del estado del servicio. 1: Pendiente, 2: En proceso, 3: Completado, 4: Cancelado." }
+                },
+                "required": ["service_status_id"]
             },
             "SaleCreationSuccessResponse": {
                 "type": "object",
@@ -375,6 +421,19 @@
                         "properties": {
                             "sale_id": { "type": "integer" },
                             "payment_status_id": { "type": "integer" }
+                        }
+                    }
+                }
+            },
+            "UpdateServiceStatusResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string", "example": "Sale service status updated successfully" },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "sale_id": { "type": "integer" },
+                            "service_status_id": { "type": "integer" }
                         }
                     }
                 }

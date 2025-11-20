@@ -39,6 +39,16 @@ const swaggerDocument = {
       ...metrics.components.schemas,
       ...home.components.schemas
     },
+    responses: {
+      ...users.components.responses,
+      ...employees.components.responses,
+      ...clients.components.responses,
+      ...services.components.responses,
+      ...products.components.responses,
+      ...sales.components.responses,
+      ...metrics.components.responses,
+      ...home.components.responses
+    },
     securitySchemes: {
       ...users.components.securitySchemes
     }

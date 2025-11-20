@@ -210,6 +210,7 @@ class SalesService {
                 s.total AS sale_total,
                 pm.name AS payment_method,
                 ps.name AS payment_status,
+                ss_status.name AS service_status,
                 s.created_at
             FROM sales s
             JOIN clients c ON s.client_id = c.id
@@ -217,6 +218,7 @@ class SalesService {
             JOIN services sv ON sv.id = ss.service_id
             JOIN payment_methods pm ON s.payment_method_id = pm.id
             JOIN payment_status ps ON s.payment_status_id = ps.id
+            JOIN service_status ss_status ON s.service_status_id = ss_status.id
             WHERE s.sale_type_id = 1
               AND s.deleted_at IS NULL`;
 
@@ -256,6 +258,7 @@ class SalesService {
                         sale_total: row.sale_total,
                         payment_method: row.payment_method,
                         payment_status: row.payment_status,
+                        service_status: row.service_status,
                         created_at: row.created_at,
                         services: []
                     });
@@ -431,16 +434,79 @@ class SalesService {
                 throw error;
             }
 
-            await connection.query(
-                `UPDATE sales SET payment_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
-                [payment_status_id, updated_by, saleId]
-            );
+            // If the payment status is 'Canceled' (ID 3), also update the service status to 'Canceled'.
+            if (payment_status_id === 3) {
+                // Find the ID for the 'Cancelado' service status
+                const [serviceStatusRows] = await connection.query(
+                    `SELECT id FROM service_status WHERE name = 'Cancelado' LIMIT 1`
+                );
+
+                if (serviceStatusRows.length === 0) {
+                    // This is a server-side issue, the status should exist
+                    throw new Error("Internal Server Error: 'Cancelado' service status not found.");
+                }
+                const canceledServiceStatusId = serviceStatusRows[0].id;
+
+                // Update both payment and service status
+                await connection.query(
+                    `UPDATE sales SET payment_status_id = ?, service_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
+                    [payment_status_id, canceledServiceStatusId, updated_by, saleId]
+                );
+            } else {
+                // Update only the payment status for other cases
+                await connection.query(
+                    `UPDATE sales SET payment_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
+                    [payment_status_id, updated_by, saleId]
+                );
+            }
 
             await connection.commit();
 
             return {
                 message: 'Sale payment status updated successfully',
                 data: { sale_id: saleId, payment_status_id }
+            };
+        } catch (error) {
+            if (connection) await connection.rollback();
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async updateServiceStatus(saleId, { service_status_id, updated_by }) {
+        let connection;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            const [sales] = await connection.query(
+                `SELECT id, service_status_id FROM sales WHERE id = ? AND sale_type_id = 1 AND deleted_at IS NULL`,
+                [saleId]
+            );
+
+            if (sales.length === 0) {
+                const error = new Error('Service sale not found');
+                error.status = 404;
+                throw error;
+            }
+
+            if (sales[0].service_status_id === service_status_id) {
+                const error = new Error('Sale is already in the requested service status.');
+                error.status = 400; // Bad Request, as no change is needed
+                throw error;
+            }
+
+            await connection.query(
+                `UPDATE sales SET service_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
+                [service_status_id, updated_by, saleId]
+            );
+
+            await connection.commit();
+
+            return {
+                message: 'Sale service status updated successfully',
+                data: { sale_id: saleId, service_status_id }
             };
         } catch (error) {
             if (connection) await connection.rollback();
