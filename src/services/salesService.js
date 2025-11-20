@@ -449,6 +449,48 @@ class SalesService {
             if (connection) connection.release();
         }
     }
+
+    async updateServiceStatus(saleId, { service_status_id, updated_by }) {
+        let connection;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            const [sales] = await connection.query(
+                `SELECT id, service_status_id FROM sales WHERE id = ? AND sale_type_id = 1 AND deleted_at IS NULL`,
+                [saleId]
+            );
+
+            if (sales.length === 0) {
+                const error = new Error('Service sale not found');
+                error.status = 404;
+                throw error;
+            }
+
+            if (sales[0].service_status_id === service_status_id) {
+                const error = new Error('Sale is already in the requested service status.');
+                error.status = 400; // Bad Request, as no change is needed
+                throw error;
+            }
+
+            await connection.query(
+                `UPDATE sales SET service_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
+                [service_status_id, updated_by, saleId]
+            );
+
+            await connection.commit();
+
+            return {
+                message: 'Sale service status updated successfully',
+                data: { sale_id: saleId, service_status_id }
+            };
+        } catch (error) {
+            if (connection) await connection.rollback();
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
 }
 
 module.exports = SalesService;

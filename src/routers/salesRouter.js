@@ -1,6 +1,6 @@
 const express = require('express');
-const { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices, getPaymentMethods, updatePaymentStatus } = require('../controllers/salesController');
-const { postSaleProductsSchema, postSaleServicesSchema, updatePaymentStatusSchema } = require('../schemas/salesSchema');
+const { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices, getPaymentMethods, updatePaymentStatus, updateServiceStatus } = require('../controllers/salesController');
+const { postSaleProductsSchema, postSaleServicesSchema, updatePaymentStatusSchema, updateServiceStatusSchema, getSaleByIdSchema } = require('../schemas/salesSchema');
 const { validatorHandler } = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 
@@ -38,6 +38,13 @@ salesRouter.patch('/:id/payment-status',
     checkRole(1,2),
     validatorHandler(updatePaymentStatusSchema, 'body'),
     updatePaymentStatus
+);
+
+salesRouter.patch('/services/:id/status',
+    checkRole(1,2),
+    validatorHandler(getSaleByIdSchema, 'params'),
+    validatorHandler(updateServiceStatusSchema, 'body'),
+    updateServiceStatus
 );
 
 

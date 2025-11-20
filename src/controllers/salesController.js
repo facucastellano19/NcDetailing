@@ -65,5 +65,18 @@ async function updatePaymentStatus(req, res, next) {
     }
 }
 
+async function updateServiceStatus(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { service_status_id } = req.body;
+        const updated_by = req.userIdToken;
 
-module.exports = { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices, getPaymentMethods, updatePaymentStatus }
+        const result = await service.updateServiceStatus(id, { service_status_id, updated_by });
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+module.exports = { getSalesProducts, postSaleProducts, getSalesServices, postSalesServices, getPaymentMethods, updatePaymentStatus, updateServiceStatus }
