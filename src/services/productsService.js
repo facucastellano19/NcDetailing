@@ -278,6 +278,53 @@ class ProductsService {
         }
     }
 
+    async putCategory(id, data) {
+        let connection;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Check if the category to update exists
+            const [existingCategory] = await connection.query(
+                `SELECT id, name FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+
+            if (existingCategory.length === 0) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            // 2. Check for name conflict
+            const [conflictCategory] = await connection.query(
+                `SELECT id FROM product_categories WHERE name = ? AND id != ? AND deleted_at IS NULL`,
+                [data.name, id]
+            );
+
+            if (conflictCategory.length > 0) {
+                const error = new Error('Another category with this name already exists.');
+                error.status = 409; // Conflict
+                throw error;
+            }
+
+            // 3. Update the category
+            await connection.query(
+                `UPDATE product_categories SET name = ?, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.name, data.updated_by, id]
+            );
+
+            await connection.commit();
+
+            return { message: 'Category updated successfully', data: { id, ...data } };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
     async postCategory(data) {
         let connection;
         try {
@@ -293,7 +340,7 @@ class ProductsService {
             if (existingCategory.length > 0) {
                 const category = existingCategory[0];
                 if (category.deleted_at === null) {
-                    // Category is active, throw conflict error
+                    // 2. Category is active, throw conflict error
                     const error = new Error('Category with this name already exists');
                     error.status = 409; // 409 Conflict is more appropriate
                     throw error;
@@ -396,6 +443,32 @@ class ProductsService {
         }
     }
 
+    async getCategoryById(id) {
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `
+                SELECT id, name 
+                FROM product_categories 
+                WHERE deleted_at IS NULL AND id = ?
+            `;
+            const [categoryResult] = await connection.query(query, [id]);
+            const category = categoryResult[0];
+
+            if (!category) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            return {
+                message: 'Category retrieved successfully',
+                data: category
+            };
+        } finally {
+            if (connection) connection.release();
+        }
+    }
 }
 
 
