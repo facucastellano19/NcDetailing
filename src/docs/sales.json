@@ -87,7 +87,7 @@
             "get": {
                 "tags": ["Sales"],
                 "summary": "Get a list of service sales",
-                "description": "Retrieves a list of all service sales, with optional filtering by client name, date range, and payment status. Requires 'admin' or 'employee' role.",
+                "description": "Retrieves a list of all service sales, with optional filtering by client name, date range, payment status, and service status. Requires 'admin' or 'employee' role.",
                 "security": [{ "bearerAuth": [] }],
                 "parameters": [
                     {
@@ -112,6 +112,12 @@
                         "name": "paymentStatusId",
                         "in": "query",
                         "description": "Filter sales by payment status ID (1: Pendiente, 2: Pagado, 3: Cancelado).",
+                        "schema": { "type": "integer" }
+                    },
+                    {
+                        "name": "serviceStatusId",
+                        "in": "query",
+                        "description": "Filter sales by service status ID (1: Pendiente, 2: En proceso, 3: Completado, 4: Cancelado).",
                         "schema": { "type": "integer" }
                     }
                 ],
