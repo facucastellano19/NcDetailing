@@ -77,4 +77,37 @@ async function postCategory(req, res, next) {
     }
 }
 
-module.exports = { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory }
+async function putCategory(req, res, next) {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+        data.updated_by = req.userIdToken;
+        const result = await service.putCategory(id, data);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function deleteCategory(req, res, next) {
+    try {
+        const { id } = req.params;
+        const data = { deleted_by: req.userIdToken };
+        const result = await service.deleteCategory(id, data);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+async function getCategoryById(req, res, next) {
+    try {
+        const { id } = req.params;
+        const result = await service.getCategoryById(id);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory, putCategory, deleteCategory, getCategoryById }

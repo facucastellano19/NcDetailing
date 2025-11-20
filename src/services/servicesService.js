@@ -140,33 +140,133 @@ class ServicesService {
         try {
             connection = await getConnection();
             await connection.beginTransaction();
-
+    
+            // 1. Check if a category with this name exists (active or soft-deleted)
             const [existingCategory] = await connection.query(
-                `SELECT id FROM service_categories WHERE name = ? AND deleted_at IS NULL`,
+                `SELECT id, deleted_at FROM service_categories WHERE name = ?`,
                 [data.name]
             );
-
+    
             if (existingCategory.length > 0) {
-                const error = new Error('Category with this name already exists');
+                const category = existingCategory[0];
+                if (category.deleted_at === null) {
+                    // 2. Category is active, throw conflict error
+                    const error = new Error('Category with this name already exists');
+                    error.status = 409;
+                    throw error;
+                } else {
+                    // 2a. Category is soft-deleted, so we "undelete" it
+                    await connection.query(
+                        `UPDATE service_categories 
+                         SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW(), updated_by = ? 
+                         WHERE id = ?`,
+                        [data.created_by, category.id]
+                    );
+                    await connection.commit();
+                    return {
+                        message: 'Category restored successfully',
+                        data: { id: category.id, ...data }
+                    };
+                }
+            }
+    
+            // 2b. Category does not exist, create a new one
+            const [insertResult] = await connection.query(
+                `INSERT INTO service_categories (name, created_at, created_by)
+                 VALUES (?, NOW(), ?)`,
+                [data.name, data.created_by]
+            );
+    
+            await connection.commit();
+            return {
+                message: 'Category created successfully',
+                data: { id: insertResult.insertId, ...data }
+            };
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async putCategory(id, data) {
+        let connection;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            const [existingCategory] = await connection.query(
+                `SELECT id FROM service_categories WHERE id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+            if (existingCategory.length === 0) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            const [conflictCategory] = await connection.query(
+                `SELECT id FROM service_categories WHERE name = ? AND id != ? AND deleted_at IS NULL`,
+                [data.name, id]
+            );
+            if (conflictCategory.length > 0) {
+                const error = new Error('Another category with this name already exists.');
                 error.status = 409;
                 throw error;
             }
 
-            const [result] = await connection.query(
-                `INSERT INTO service_categories (name, created_by, created_at) VALUES (?, ?, NOW())`,
-                [data.name, data.created_by]
+            await connection.query(
+                `UPDATE service_categories SET name = ?, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.name, data.updated_by, id]
             );
 
             await connection.commit();
-
-            return {
-                message: 'Category created successfully',
-                data: { id: result.insertId, ...data }
-            };
-
-        } catch (err) {
+            return { message: 'Category updated successfully', data: { id, ...data } };
+        } catch (error) {
             await connection.rollback();
-            throw err;
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async deleteCategory(id, data) {
+        let connection;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            const [existingCategory] = await connection.query(
+                `SELECT id FROM service_categories WHERE id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+            if (existingCategory.length === 0) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            const [servicesUsingCategory] = await connection.query(
+                `SELECT id FROM services WHERE category_id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+            if (servicesUsingCategory.length > 0) {
+                const error = new Error('Cannot delete category because it is being used by one or more services.');
+                error.status = 409;
+                throw error;
+            }
+
+            await connection.query(
+                `UPDATE service_categories SET deleted_at = NOW(), deleted_by = ? WHERE id = ?`,
+                [data.deleted_by, id]
+            );
+
+            await connection.commit();
+            return { message: 'Category deleted successfully' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
         } finally {
             if (connection) connection.release();
         }
@@ -282,6 +382,30 @@ class ServicesService {
         } catch (err) {
             await connection.rollback();
             throw err;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async getCategoryById(id) {
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `
+                SELECT id, name 
+                FROM service_categories 
+                WHERE deleted_at IS NULL AND id = ?
+            `;
+            const [categoryResult] = await connection.query(query, [id]);
+            const category = categoryResult[0];
+
+            if (!category) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            return { message: 'Category retrieved successfully', data: category };
         } finally {
             if (connection) connection.release();
         }

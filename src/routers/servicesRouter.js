@@ -1,6 +1,6 @@
 const express = require('express')
-const { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory } = require('../controllers/servicesController');
-const {getServiceByIdSchema, postServiceSchema, putServiceSchema, deleteServiceSchema, postCategorySchema} = require('../schemas/servicesSchema');
+const { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory, putCategory, deleteCategory, getCategoryById } = require('../controllers/servicesController');
+const { getServiceByIdSchema, postServiceSchema, putServiceSchema, deleteServiceSchema, postCategorySchema } = require('../schemas/servicesSchema');
 const {validatorHandler} = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 
@@ -11,16 +11,37 @@ servicesRouter.get('/',
     checkRole(1),
     getServices)
 
+// --- Category Routes ---
 servicesRouter.get('/categories',
     checkRole(1),
     getCategories)
 
-servicesRouter.post('/categories',
+servicesRouter.get('/category/:id',
+    checkRole(1),
+    validatorHandler(getServiceByIdSchema, 'params'), // Reusing schema for ID validation
+    getCategoryById
+)
+
+servicesRouter.post('/category',
     checkRole(1),
     validatorHandler(postCategorySchema, 'body'),
     postCategory
 )
 
+servicesRouter.put('/category/:id',
+    checkRole(1),
+    validatorHandler(getServiceByIdSchema, 'params'),
+    validatorHandler(postCategorySchema, 'body'),
+    putCategory
+)
+
+servicesRouter.delete('/category/:id',
+    checkRole(1),
+    validatorHandler(deleteServiceSchema, 'params'),
+    deleteCategory
+)
+
+// --- Service Routes ---
 servicesRouter.get('/:id',
     checkRole(1),
     validatorHandler(getServiceByIdSchema, 'params'),
