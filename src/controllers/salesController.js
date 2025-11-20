@@ -24,8 +24,8 @@ async function postSaleProducts(req, res, next) {
 
 async function getSalesServices(req, res, next) {
     try {
-        const { clientName, startDate, endDate, paymentStatusId } = req.query;
-        const salesServices = await service.getSalesServices({ clientName, startDate, endDate, paymentStatusId });
+        const { clientName, startDate, endDate, paymentStatusId, serviceStatusId } = req.query;
+        const salesServices = await service.getSalesServices({ clientName, startDate, endDate, paymentStatusId, serviceStatusId });
         res.json(salesServices);
     } catch (error) {
         next(error);

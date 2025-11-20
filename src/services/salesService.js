@@ -198,7 +198,7 @@ class SalesService {
         let connection;
         try {
             connection = await getConnection();
-            const { clientName, startDate, endDate, paymentStatusId } = params;
+            const { clientName, startDate, endDate, paymentStatusId, serviceStatusId } = params;
 
             let query = `
             SELECT 
@@ -242,6 +242,11 @@ class SalesService {
             if (paymentStatusId) {
                 query += ` AND s.payment_status_id = ?`;
                 queryParams.push(paymentStatusId);
+            }
+
+            if (serviceStatusId) {
+                query += ` AND s.service_status_id = ?`;
+                queryParams.push(serviceStatusId);
             }
 
             query += ` ORDER BY s.created_at DESC, s.id DESC`;
