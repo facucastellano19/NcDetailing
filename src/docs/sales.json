@@ -83,7 +83,7 @@
                 }
             }
         },
-        "/api/sales/services": {
+        //"/api/sales/services": {
             "get": {
                 "tags": ["Sales"],
                 "summary": "Get a list of service sales",
@@ -215,6 +215,45 @@
                     "404": { "$ref": "#/components/responses/NotFoundError" }
                 }
             }
+        },
+        "/api/sales/services/{id}/status": {
+            "patch": {
+                "tags": ["Sales"],
+                "summary": "Update a service sale's operational status",
+                "description": "Updates the operational status of a specific service sale (e.g., from 'Pendiente' to 'En Proceso' or 'Finalizado'). Requires 'admin' or 'employee' role.",
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The ID of the service sale to update.",
+                        "schema": { "type": "integer" }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": { "$ref": "#/components/schemas/UpdateServiceStatus" }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Service status updated successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/UpdateServiceStatusResponse" }
+                            }
+                        }
+                    },
+                    "400": { "$ref": "#/components/responses/BadRequestError" },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" },
+                    "404": { "$ref": "#/components/responses/NotFoundError" }
+                }
+            }
         }
     },
     "components": {
@@ -272,6 +311,13 @@
                     "payment_status_id": { "type": "integer", "example": 2, "description": "1: Pendiente, 2: Pagado, 3: Cancelado" }
                 },
                 "required": ["payment_status_id"]
+            },
+            "UpdateServiceStatus": {
+                "type": "object",
+                "properties": {
+                    "service_status_id": { "type": "integer", "example": 2, "description": "1: Pendiente, 2: En Proceso, 3: Finalizado, 4: Cancelado" }
+                },
+                "required": ["service_status_id"]
             },
             "SaleCreationSuccessResponse": {
                 "type": "object",
@@ -375,6 +421,19 @@
                         "properties": {
                             "sale_id": { "type": "integer" },
                             "payment_status_id": { "type": "integer" }
+                        }
+                    }
+                }
+            },
+            "UpdateServiceStatusResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string", "example": "Sale service status updated successfully" },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "sale_id": { "type": "integer" },
+                            "service_status_id": { "type": "integer" }
                         }
                     }
                 }
