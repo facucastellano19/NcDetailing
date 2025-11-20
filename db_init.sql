@@ -137,7 +137,7 @@ CREATE TABLE service_status (
 );
 
 INSERT INTO service_status (name)
-VALUES ('Pendiente'), ('En proceso'), ('Completado');
+VALUES ('Pendiente'), ('En proceso'), ('Completado'),('Cancelado');
 
 -- =========================================
 -- SALE TYPES
