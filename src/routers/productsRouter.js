@@ -1,9 +1,8 @@
 const express = require('express')
-const { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory, getCategories } = require('../controllers/productsController');
+const { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory, getCategories, deleteCategory, putCategory, getCategoryById } = require('../controllers/productsController');
 const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema, getProductsSchema, updateMinStockSchema } = require('../schemas/productsSchema');
 const { validatorHandler } = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
-const { valid } = require('joi');
 
 const productsRouter = express.Router()
 productsRouter.use(express.json())
@@ -13,9 +12,29 @@ productsRouter.get('/',
     validatorHandler(getProductsSchema, 'query'),
     getProducts)
 
+productsRouter.put('/category/:id',
+    checkRole(1),
+    validatorHandler(deleteProductSchema, 'params'), // Reusing schema for ID validation
+    validatorHandler(postCategorySchema, 'body'),   // Reusing schema for name validation
+    putCategory
+)
+
+
+productsRouter.delete('/category/:id',
+    checkRole(1),
+    validatorHandler(deleteProductSchema, 'params'),
+    deleteCategory
+)
+
 productsRouter.get('/categories',
     checkRole(1),
     getCategories
+)
+
+productsRouter.get('/category/:id',
+    checkRole(1),
+    validatorHandler(getProductByIdSchema, 'params'), // Reutilizamos el schema de ID
+    getCategoryById
 )
 
 productsRouter.get('/:id',

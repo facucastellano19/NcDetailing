@@ -278,36 +278,147 @@ class ProductsService {
         }
     }
 
+    async putCategory(id, data) {
+        let connection;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Check if the category to update exists
+            const [existingCategory] = await connection.query(
+                `SELECT id, name FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+
+            if (existingCategory.length === 0) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            // 2. Check for name conflict
+            const [conflictCategory] = await connection.query(
+                `SELECT id FROM product_categories WHERE name = ? AND id != ? AND deleted_at IS NULL`,
+                [data.name, id]
+            );
+
+            if (conflictCategory.length > 0) {
+                const error = new Error('Another category with this name already exists.');
+                error.status = 409; // Conflict
+                throw error;
+            }
+
+            // 3. Update the category
+            await connection.query(
+                `UPDATE product_categories SET name = ?, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.name, data.updated_by, id]
+            );
+
+            await connection.commit();
+
+            return { message: 'Category updated successfully', data: { id, ...data } };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
     async postCategory(data) {
         let connection;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
+            // 1. Check if a category with this name exists (active or soft-deleted)
             const [existingCategory] = await connection.query(
-                `SELECT id FROM product_categories WHERE name = ? AND deleted_at IS NULL`,
+                `SELECT id, deleted_at FROM product_categories WHERE name = ?`,
                 [data.name]
             );
 
             if (existingCategory.length > 0) {
-                const error = new Error('Category with this name already exists');
-                error.status = 400;
-                throw error;
+                const category = existingCategory[0];
+                if (category.deleted_at === null) {
+                    // 2. Category is active, throw conflict error
+                    const error = new Error('Category with this name already exists');
+                    error.status = 409; // 409 Conflict is more appropriate
+                    throw error;
+                } else {
+                    // 2a. Category is soft-deleted, so we "undelete" it
+                    await connection.query(
+                        `UPDATE product_categories 
+                         SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW(), updated_by = ? 
+                         WHERE id = ?`,
+                        [data.created_by, category.id]
+                    );
+                    await connection.commit();
+                    return {
+                        message: 'Category restored successfully',
+                        data: { id: category.id, ...data }
+                    };
+                }
             }
 
-            const [result] = await connection.query(
+            // 2b. Category does not exist, create a new one
+            const [insertResult] = await connection.query(
                 `INSERT INTO product_categories (name, created_at, created_by)
                  VALUES (?, NOW(), ?)`,
                 [data.name, data.created_by]
             );
 
             await connection.commit();
-
             return {
                 message: 'Category created successfully',
-                data: { id: result.insertId, ...data }
+                data: { id: insertResult.insertId, ...data }
             };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
 
+    async deleteCategory(id, data) {
+        let connection;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Check if the category exists
+            const [existingCategory] = await connection.query(
+                `SELECT id, name FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+
+            if (existingCategory.length === 0) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            // 2. Check if any product is using this category
+            const [productsUsingCategory] = await connection.query(
+                `SELECT id FROM products WHERE category_id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+
+            if (productsUsingCategory.length > 0) {
+                const error = new Error('Cannot delete category because it is being used by one or more products.');
+                error.status = 409; // 409 Conflict is appropriate here
+                throw error;
+            }
+
+            // 3. Soft delete the category
+            await connection.query(
+                `UPDATE product_categories SET deleted_at = NOW(), deleted_by = ? WHERE id = ?`,
+                [data.deleted_by, id]
+            );
+
+            await connection.commit();
+
+            return { message: 'Category deleted successfully' };
         } catch (error) {
             await connection.rollback();
             throw error;
@@ -332,6 +443,32 @@ class ProductsService {
         }
     }
 
+    async getCategoryById(id) {
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `
+                SELECT id, name 
+                FROM product_categories 
+                WHERE deleted_at IS NULL AND id = ?
+            `;
+            const [categoryResult] = await connection.query(query, [id]);
+            const category = categoryResult[0];
+
+            if (!category) {
+                const error = new Error('Category not found');
+                error.status = 404;
+                throw error;
+            }
+
+            return {
+                message: 'Category retrieved successfully',
+                data: category
+            };
+        } finally {
+            if (connection) connection.release();
+        }
+    }
 }
 
 
