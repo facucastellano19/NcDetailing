@@ -2,6 +2,7 @@ const usersService = require('../services/usersService.js');
 const service = new usersService();
 const getConnection = require('../database/mysql');
 const bcrypt = require('bcrypt')
+const auditLogService = require('./auditLogService');
 
 class EmployeesService {
 
@@ -58,9 +59,10 @@ class EmployeesService {
 
     async putEmployee(id, data) {
         let connection;
+        let oldEmployeeData = null;
         try {
             connection = await getConnection();
-            const queryEmployeExists = `SELECT id, name, username, email, password,role_id
+            const queryEmployeExists = `SELECT id, name, username, email, role_id, password
                 FROM users where deleted_at IS NULL AND role_id = 2 AND id = ?`
 
             const [employees] = await connection.query(queryEmployeExists, [id]);
@@ -72,6 +74,9 @@ class EmployeesService {
             }
 
             const employee = employees[0];
+            // Clone the employee data for the audit log, but remove the password
+            oldEmployeeData = { ...employees[0] };
+            delete oldEmployeeData.password;
 
             const {
                 name = employee.name,
@@ -100,10 +105,39 @@ class EmployeesService {
                 throw error;
             }
 
+            // Get the full new state of the employee for auditing (excluding password)
+            const [newEmployeeDataResult] = await connection.query(
+                `SELECT id, name, username, email, role_id, updated_at, updated_by FROM users WHERE id = ?`, 
+                [id]
+            );
+            const newEmployeeData = newEmployeeDataResult[0];
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'employee',
+                entityId: id,
+                changes: { oldValue: oldEmployeeData, newValue: newEmployeeData },
+                ipAddress: data.ipAddress
+            });
+
             return {
                 message: 'Employee updated successfully',
                 data: { id, name, username, email }
             };
+        } catch (error) {
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'employee',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
+            throw error;
         } finally {
             if (connection) connection.release();
         }
@@ -111,13 +145,15 @@ class EmployeesService {
 
     async deleteEmployee(id, data) {
         let connection;
+        let oldEmployeeData = null;
         try {
             connection = await getConnection();
-            const queryEmployeExists = `SELECT id
+            const queryEmployeExists = `SELECT *
                 FROM users where deleted_at IS NULL AND role_id = 2 AND id = ?`
 
             const [employees] = await connection.query(queryEmployeExists, [id]);
 
+            oldEmployeeData = employees[0];
             if (!employees[0]) {
                 const error = new Error('Employee not found');
                 error.status = 404;
@@ -134,11 +170,33 @@ class EmployeesService {
                 throw error;
             }
 
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'employee',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                changes: { oldValue: oldEmployeeData }
+            });
+
             return {
                 id,
                 message: 'Employee deleted successfully',
                 deleted_by: data.deleted_by
             }
+        } catch (error) {
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'employee',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
+            throw error;
         } finally {
             if (connection) connection.release();
         }

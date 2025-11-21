@@ -15,6 +15,7 @@ async function postSaleProducts(req, res, next) {
     try {
         const data = req.body;
         data.created_by = req.userIdToken;
+        data.ipAddress = req.ip;
         const newSaleProducts = await service.postSaleProducts(data);
         res.status(201).json(newSaleProducts);
     } catch (error) {
@@ -36,6 +37,7 @@ async function postSalesServices(req, res, next) {
     try {
         const data = req.body;
         data.created_by = req.userIdToken;
+        data.ipAddress = req.ip;
         const newSaleServices = await service.postSalesServices(data);
         res.status(201).json(newSaleServices);
     } catch (error) {
@@ -57,8 +59,9 @@ async function updatePaymentStatus(req, res, next) {
         const { id } = req.params;
         const { payment_status_id } = req.body;
         const updated_by = req.userIdToken;
+        const ipAddress = req.ip;
 
-        const result = await service.updatePaymentStatus(id, { payment_status_id, updated_by });
+        const result = await service.updatePaymentStatus(id, { payment_status_id, updated_by, ipAddress });
         res.json(result);
     } catch (error) {
         next(error);
@@ -70,8 +73,9 @@ async function updateServiceStatus(req, res, next) {
         const { id } = req.params;
         const { service_status_id } = req.body;
         const updated_by = req.userIdToken;
+        const ipAddress = req.ip;
 
-        const result = await service.updateServiceStatus(id, { service_status_id, updated_by });
+        const result = await service.updateServiceStatus(id, { service_status_id, updated_by, ipAddress });
         res.json(result);
     } catch (error) {
         next(error);

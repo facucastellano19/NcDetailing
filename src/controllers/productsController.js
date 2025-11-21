@@ -25,6 +25,7 @@ async function postProduct(req, res, next) {
     try {
         const data = req.body;
         data.created_by = req.userIdToken;
+        data.ipAddress = req.ip; 
         const newProduct = await service.postProduct(data);
         res.status(201).json(newProduct);
     } catch (error) {
@@ -37,6 +38,7 @@ async function putProduct(req, res, next) {
         const id = req.params.id;
         const data = req.body;
         data.updated_by = req.userIdToken;
+        data.ipAddress = req.ip; 
         const updatedProduct = await service.putProduct(id, data);
         res.json(updatedProduct);
     } catch (error) {
@@ -49,7 +51,8 @@ async function updateMinStock(req, res, next) {
         const id = req.params.id;
         const { min_stock } = req.body;
         const updated_by = req.userIdToken;
-        const updatedProduct = await service.updateMinStock(id, min_stock, updated_by);
+        const ipAddress = req.ip;
+        const updatedProduct = await service.updateMinStock(id, min_stock, updated_by, ipAddress);
         res.json(updatedProduct);
     } catch (error) {
         next(error);
@@ -59,7 +62,7 @@ async function updateMinStock(req, res, next) {
 async function deleteProduct(req, res, next) {
     try {
         const id = req.params.id;
-        const data = { deleted_by: req.userIdToken}
+        const data = { deleted_by: req.userIdToken, ipAddress: req.ip }; 
         const result = await service.deleteProduct(id,data);
         res.status(200).json(result);
     } catch (error) {
@@ -71,6 +74,7 @@ async function postCategory(req, res, next) {
     try {
         const data = req.body;
         data.created_by = req.userIdToken;
+        data.ipAddress = req.ip; 
         const newCategory = await service.postCategory(data);
         res.status(201).json(newCategory);
     } catch (error) {
@@ -83,7 +87,7 @@ async function putCategory(req, res, next) {
         const { id } = req.params;
         const data = req.body;
         data.updated_by = req.userIdToken;
-
+        data.ipAddress = req.ip;
         const result = await service.putCategory(id, data);
         res.status(200).json(result);
     } catch (error) {
@@ -94,7 +98,7 @@ async function putCategory(req, res, next) {
 async function deleteCategory(req, res, next) {
     try {
         const id = req.params.id;
-        const data = { deleted_by: req.userIdToken}
+        const data = { deleted_by: req.userIdToken, ipAddress: req.ip }; 
         const result = await service.deleteCategory(id,data);
         res.status(200).json(result);
     } catch (error) {

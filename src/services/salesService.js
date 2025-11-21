@@ -1,4 +1,5 @@
 const getConnection = require('../database/mysql');
+const auditLogService = require('./auditLogService');
 
 class SalesService {
 
@@ -175,9 +176,47 @@ class SalesService {
                     `UPDATE products SET stock = stock - ? WHERE id = ?`,
                     [item.quantity, item.product_id]
                 );
+
+                // Get the new state of the product for a detailed audit log
+                const [updatedProductRows] = await connection.query(
+                    `SELECT * FROM products WHERE id = ?`,
+                    [item.product_id]
+                );
+
+                // Audit the stock change for each product
+                await auditLogService.log({
+                    userId: data.created_by,
+                    actionType: 'UPDATE',
+                    entityType: 'product',
+                    entityId: item.product_id,
+                    changes: { oldValue: product, newValue: updatedProductRows[0] },
+                    ipAddress: data.ipAddress
+                });
             }
 
             await connection.commit();
+
+            // Get the full new state of the sale for auditing
+            const [newSaleDataResult] = await connection.query(`SELECT * FROM sales WHERE id = ?`, [saleId]);
+            
+            // Also get the product details for the audit log
+            const [saleProductsDetails] = await connection.query(
+                `SELECT product_id, quantity, price, subtotal FROM sale_products WHERE sale_id = ?`,
+                [saleId]
+            );
+
+            // Combine sale data with product details for a complete audit record
+            const newSaleState = { ...newSaleDataResult[0], products: saleProductsDetails };
+
+            // Audit Log
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'sale_product',
+                entityId: saleId,
+                changes: { newValue: newSaleState },
+                ipAddress: data.ipAddress
+            });
 
             return {
                 message: 'Sale of products created successfully',
@@ -185,7 +224,16 @@ class SalesService {
             };
 
         } catch (err) {
-            if (connection) await connection.rollback(); 
+            if (connection) await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'sale_product',
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: err.message
+            });
             throw err;
         } finally {
             if (connection) {
@@ -384,6 +432,28 @@ class SalesService {
 
             await connection.commit();
 
+            // Get the full new state of the sale for auditing
+            const [newSaleDataResult] = await connection.query(`SELECT * FROM sales WHERE id = ?`, [saleId]);
+            
+            // Also get the service details for the audit log
+            const [saleServicesDetails] = await connection.query(
+                `SELECT service_id, price FROM sale_services WHERE sale_id = ?`,
+                [saleId]
+            );
+
+            // Combine sale data with service details for a complete audit record
+            const newSaleState = { ...newSaleDataResult[0], services: saleServicesDetails };
+
+            // Audit Log
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'sale_service',
+                entityId: saleId,
+                changes: { newValue: newSaleState },
+                ipAddress: data.ipAddress
+            });
+
             return {
                 message: "Sale with services created successfully",
                 data: { sale_id: saleId, total, ...data }
@@ -391,6 +461,15 @@ class SalesService {
 
         } catch (error) {
             if (connection) await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'sale_service',
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
@@ -416,14 +495,15 @@ class SalesService {
 
     }
 
-    async updatePaymentStatus(saleId, { payment_status_id, updated_by }) {
+    async updatePaymentStatus(saleId, { payment_status_id, updated_by, ipAddress }) {
         let connection;
+        let oldSaleData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             const [sales] = await connection.query(
-                `SELECT id, payment_status_id FROM sales WHERE id = ? AND deleted_at IS NULL`,
+                `SELECT * FROM sales WHERE id = ? AND deleted_at IS NULL`,
                 [saleId]
             );
 
@@ -432,6 +512,7 @@ class SalesService {
                 error.status = 404;
                 throw error;
             }
+            oldSaleData = sales[0];
 
             if (sales[0].payment_status_id === payment_status_id) {
                 const error = new Error('Sale is already in the requested payment status.');
@@ -467,26 +548,57 @@ class SalesService {
 
             await connection.commit();
 
+            // Get the full new state of the sale for auditing
+            const [newSaleDataResult] = await connection.query(`SELECT * FROM sales WHERE id = ?`, [saleId]);
+            const newSaleData = newSaleDataResult[0];
+
+            // Determine the correct entity type based on the sale type
+            const entityType = oldSaleData.sale_type_id === 1 ? 'sale_service' : 'sale_product';
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: updated_by,
+                actionType: 'UPDATE',
+                entityType: entityType,
+                entityId: saleId,
+                changes: { oldValue: oldSaleData, newValue: newSaleData },
+                ipAddress: ipAddress
+            });
+
             return {
                 message: 'Sale payment status updated successfully',
                 data: { sale_id: saleId, payment_status_id }
             };
         } catch (error) {
             if (connection) await connection.rollback();
+            // Determine entity type even on failure, if possible
+            const entityType = oldSaleData ? (oldSaleData.sale_type_id === 1 ? 'sale_service' : 'sale_product') : 'sale';
+
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: updated_by,
+                actionType: 'UPDATE',
+                entityType: entityType,
+                entityId: saleId,
+                ipAddress: ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
         }
     }
 
-    async updateServiceStatus(saleId, { service_status_id, updated_by }) {
+    async updateServiceStatus(saleId, { service_status_id, updated_by, ipAddress }) {
         let connection;
+        let oldSaleData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             const [sales] = await connection.query(
-                `SELECT id, service_status_id FROM sales WHERE id = ? AND sale_type_id = 1 AND deleted_at IS NULL`,
+                `SELECT * FROM sales WHERE id = ? AND sale_type_id = 1 AND deleted_at IS NULL`,
                 [saleId]
             );
 
@@ -495,6 +607,7 @@ class SalesService {
                 error.status = 404;
                 throw error;
             }
+            oldSaleData = sales[0];
 
             if (sales[0].service_status_id === service_status_id) {
                 const error = new Error('Sale is already in the requested service status.');
@@ -509,12 +622,36 @@ class SalesService {
 
             await connection.commit();
 
+            // Get the full new state of the sale for auditing
+            const [newSaleDataResult] = await connection.query(`SELECT * FROM sales WHERE id = ?`, [saleId]);
+            const newSaleData = newSaleDataResult[0];
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: updated_by,
+                actionType: 'UPDATE',
+                entityType: 'sale_service',
+                entityId: saleId,
+                changes: { oldValue: oldSaleData, newValue: newSaleData },
+                ipAddress: ipAddress
+            });
+
             return {
                 message: 'Sale service status updated successfully',
                 data: { sale_id: saleId, service_status_id }
             };
         } catch (error) {
             if (connection) await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: updated_by,
+                actionType: 'UPDATE',
+                entityType: 'sale_service',
+                entityId: saleId,
+                ipAddress: ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();

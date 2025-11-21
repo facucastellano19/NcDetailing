@@ -1,4 +1,5 @@
 const getConnection = require('../database/mysql');
+const auditLogService = require('./auditLogService');
 
 class ProductsService {
 
@@ -87,18 +88,49 @@ class ProductsService {
             connection = await getConnection();
             await connection.beginTransaction();
 
-            // Check if product with same name already exists
+            // 1. Check if a product with this name exists (active or soft-deleted)
             const [existingProducts] = await connection.query(
-                `SELECT id FROM products WHERE name = ? AND deleted_at IS NULL`,
+                `SELECT * FROM products WHERE name = ?`,
                 [data.name]
             );
             if (existingProducts.length > 0) {
-                const error = new Error('Product with this name already exists');
-                error.status = 400;
-                throw error;
+                const product = existingProducts[0];
+                if (product.deleted_at === null) {
+                    // 2. Product is active, throw conflict error
+                    const error = new Error('Product with this name already exists');
+                    error.status = 409;
+                    throw error;
+                } else {
+                    // 2a. Product is soft-deleted, so we "undelete" and update it
+                    await connection.query(
+                        `UPDATE products SET 
+                            description = ?, price = ?, stock = ?, min_stock = ?, category_id = ?,
+                            deleted_at = NULL, deleted_by = NULL, 
+                            updated_at = NOW(), updated_by = ? 
+                         WHERE id = ?`,
+                        [data.description, data.price, data.stock, data.min_stock, data.category_id, data.created_by, product.id]
+                    );
+                    await connection.commit();
+
+                    // Get the full new state for auditing
+                    const [restoredProductRows] = await connection.query(`SELECT * FROM products WHERE id = ?`, [product.id]);
+                    
+                    // Audit Log for RESTORE (as UPDATE)
+                    await auditLogService.log({
+                        userId: data.created_by,
+                        actionType: 'UPDATE',
+                        entityType: 'product',
+                        entityId: product.id,
+                        changes: { oldValue: product, newValue: restoredProductRows[0] },
+                        ipAddress: data.ipAddress
+                    });
+
+                    return { message: 'Product restored successfully', data: restoredProductRows[0] };
+                }
             }
 
-            // Check if category exists
+            // 3. Product does not exist, create a new one
+            // First, check if category exists
             const [existingCategories] = await connection.query(
                 `SELECT id FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
                 [data.category_id]
@@ -118,21 +150,134 @@ class ProductsService {
 
             await connection.commit();
 
+            // Get the full new state of the product for auditing
+            const [newProductDataResult] = await connection.query(`SELECT * FROM products WHERE id = ?`, [result.insertId]);
+            const newProductData = newProductDataResult[0];
+
+            // Audit Log
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'product',
+                entityId: result.insertId,
+                changes: { newValue: newProductData },
+                ipAddress: data.ipAddress
+            });
+
             return {
                 message: 'Product created successfully',
                 data: { id: result.insertId, ...data }
             };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'product',
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
         }
     }
 
-    // Update an existing product
+    // Update an existing product - SINGLE CORRECT IMPLEMENTATION
     async putProduct(id, data) {
         let connection;
+        let oldProductData = null;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Check if product exists and get its old data for auditing
+            const [existingProducts] = await connection.query(
+                `SELECT * FROM products WHERE deleted_at IS NULL AND id = ?`,
+                [id]
+            );
+            if (!existingProducts[0]) {
+                const error = new Error('Product not found');
+                error.status = 404;
+                throw error;
+            }
+            const product = existingProducts[0];
+            oldProductData = existingProducts[0];
+
+            // 2. Check if category exists if it's being updated
+            if (data.category_id) {
+                const [existingCategories] = await connection.query(
+                    `SELECT id FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
+                    [data.category_id]
+                );
+                if (existingCategories.length === 0) {
+                    const error = new Error('Category not found');
+                    error.status = 400;
+                    throw error;
+                }
+            }
+
+            // 3. Update product
+            await connection.query(
+                `UPDATE products
+                 SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
+                 WHERE id = ?`,
+                [
+                    data.name ?? product.name,
+                    data.description ?? product.description,
+                    data.price ?? product.price,
+                    data.stock ?? product.stock,
+                    data.category_id ?? product.category_id,
+                    data.updated_by,
+                    id
+                ]
+            );
+
+            await connection.commit();
+
+            // Get the full new state of the product for auditing
+            const [newProductDataResult] = await connection.query(`SELECT * FROM products WHERE id = ?`, [id]);
+            const newProductData = newProductDataResult[0];
+
+            // 4. Audit Log for success
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'product',
+                entityId: id,
+                changes: { oldValue: oldProductData, newValue: newProductData },
+                ipAddress: data.ipAddress
+            });
+
+            // 5. Return response
+            return {
+                message: 'Product updated successfully',
+                data: newProductData
+            };
+        } catch (error) {
+            await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'product',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async updateMinStock(id, min_stock, updated_by, ipAddress) {
+        let connection;
+        let ipAddressForAudit = ipAddress; // Use a local variable for clarity
+        let oldProductData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
@@ -147,77 +292,7 @@ class ProductsService {
                 error.status = 404;
                 throw error;
             }
-            const product = existingProducts[0];
-
-            // Check if category exists 
-            if (data.category_id) {
-                const [existingCategories] = await connection.query(
-                    `SELECT id FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
-                    [data.category_id]
-                );
-                if (existingCategories.length === 0) {
-                    const error = new Error('Category not found');
-                    error.status = 400;
-                    throw error;
-                }
-            }
-
-            // Update product
-            await connection.query(
-                `UPDATE products
-                 SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
-                 WHERE id = ?`,
-                [
-                    data.name ?? product.name,
-                    data.description ?? product.description,
-                    data.price ?? product.price,
-                    data.stock ?? product.stock,
-                    data.category_id ?? product.category_id,
-                    data.updated_by ?? product.updated_by,
-                    id
-                ]
-            );
-
-            await connection.commit();
-
-            const updatedProduct = {
-                id,
-                name: data.name ?? product.name,
-                description: data.description ?? product.description,
-                price: data.price ?? product.price,
-                stock: data.stock ?? product.stock,
-                category_id: data.category_id ?? product.category_id,
-                updated_by: data.updated_by ?? product.updated_by
-            };
-
-            return {
-                message: 'Product updated successfully',
-                data: updatedProduct
-            };
-        } catch (error) {
-            await connection.rollback();
-            throw error;
-        } finally {
-            if (connection) connection.release();
-        }
-    }
-
-    async updateMinStock(id, min_stock, updated_by) {
-        let connection;
-        try {
-            connection = await getConnection();
-            await connection.beginTransaction();
-
-            // Check if product exists
-            const [existingProducts] = await connection.query(
-                `SELECT id FROM products WHERE deleted_at IS NULL AND id = ?`,
-                [id]
-            );
-            if (!existingProducts[0]) {
-                const error = new Error('Product not found');
-                error.status = 404;
-                throw error;
-            }
+            oldProductData = existingProducts[0];
 
             // Update min_stock
             await connection.query(
@@ -229,12 +304,36 @@ class ProductsService {
 
             await connection.commit();
 
+            // Get the full new state of the product for auditing
+            const [newProductDataResult] = await connection.query(`SELECT * FROM products WHERE id = ?`, [id]);
+            const newProductData = newProductDataResult[0];
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: updated_by,
+                actionType: 'UPDATE',
+                entityType: 'product',
+                entityId: id,
+                changes: { oldValue: oldProductData, newValue: newProductData },
+                ipAddress: ipAddressForAudit
+            });
+
             return {
                 message: 'Product min_stock updated successfully',
                 data: { id, min_stock, updated_by }
             };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: updated_by,
+                actionType: 'UPDATE',
+                entityType: 'product',
+                entityId: id,
+                ipAddress: ipAddressForAudit,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
@@ -243,15 +342,17 @@ class ProductsService {
 
     async deleteProduct(id, data) {
         let connection;
+        let oldProductData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             const [existingProducts] = await connection.query(
-                `SELECT id, name FROM products WHERE deleted_at IS NULL AND id = ?`,
+                `SELECT * FROM products WHERE deleted_at IS NULL AND id = ?`,
                 [id]
             );
             const product = existingProducts[0];
+            oldProductData = product; // Capture old data before any potential error
             if (!product) {
                 const error = new Error('Product not found');
                 error.status = 404;
@@ -266,12 +367,32 @@ class ProductsService {
 
             await connection.commit();
 
+            // Audit Log
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'product',
+                entityId: id,
+                changes: { oldValue: oldProductData },
+                ipAddress: data.ipAddress
+            });
+
             return {
                 message: 'Product deleted successfully',
                 data: { id, name: product.name }
             };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'product',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
@@ -280,13 +401,14 @@ class ProductsService {
 
     async putCategory(id, data) {
         let connection;
+        let oldCategoryData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             // 1. Check if the category to update exists
             const [existingCategory] = await connection.query(
-                `SELECT id, name FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
+                `SELECT * FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
                 [id]
             );
 
@@ -295,6 +417,7 @@ class ProductsService {
                 error.status = 404;
                 throw error;
             }
+            oldCategoryData = existingCategory[0];
 
             // 2. Check for name conflict
             const [conflictCategory] = await connection.query(
@@ -316,9 +439,33 @@ class ProductsService {
 
             await connection.commit();
 
+            // Get the full new state of the category for auditing
+            const [newCategoryDataResult] = await connection.query(`SELECT * FROM product_categories WHERE id = ?`, [id]);
+            const newCategoryData = newCategoryDataResult[0];
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'product_category',
+                entityId: id,
+                changes: { oldValue: oldCategoryData, newValue: newCategoryData },
+                ipAddress: data.ipAddress
+            });
+
             return { message: 'Category updated successfully', data: { id, ...data } };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'product_category',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
@@ -333,7 +480,7 @@ class ProductsService {
 
             // 1. Check if a category with this name exists (active or soft-deleted)
             const [existingCategory] = await connection.query(
-                `SELECT id, deleted_at FROM product_categories WHERE name = ?`,
+                `SELECT * FROM product_categories WHERE name = ?`,
                 [data.name]
             );
 
@@ -353,6 +500,16 @@ class ProductsService {
                         [data.created_by, category.id]
                     );
                     await connection.commit();
+
+                    // Audit Log for RESTORE (as UPDATE)
+                    await auditLogService.log({
+                        userId: data.created_by,
+                        actionType: 'UPDATE',
+                        entityType: 'product_category',
+                        entityId: category.id,
+                        changes: { oldValue: category, newValue: { ...category, deleted_at: null, deleted_by: null } },
+                        ipAddress: data.ipAddress
+                    });
                     return {
                         message: 'Category restored successfully',
                         data: { id: category.id, ...data }
@@ -368,12 +525,31 @@ class ProductsService {
             );
 
             await connection.commit();
+
+            // Audit Log for CREATE
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'product_category',
+                entityId: insertResult.insertId,
+                changes: { newValue: data },
+                ipAddress: data.ipAddress
+            });
             return {
                 message: 'Category created successfully',
                 data: { id: insertResult.insertId, ...data }
             };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'product_category',
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
@@ -382,16 +558,18 @@ class ProductsService {
 
     async deleteCategory(id, data) {
         let connection;
+        let oldCategoryData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             // 1. Check if the category exists
             const [existingCategory] = await connection.query(
-                `SELECT id, name FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
+                `SELECT * FROM product_categories WHERE id = ? AND deleted_at IS NULL`,
                 [id]
             );
 
+            oldCategoryData = existingCategory[0];
             if (existingCategory.length === 0) {
                 const error = new Error('Category not found');
                 error.status = 404;
@@ -418,9 +596,29 @@ class ProductsService {
 
             await connection.commit();
 
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'product_category',
+                entityId: id,
+                changes: { oldValue: oldCategoryData },
+                ipAddress: data.ipAddress
+            });
+
             return { message: 'Category deleted successfully' };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'product_category',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
