@@ -4,6 +4,7 @@ const service = new usersService();
 async function login(req, res, next) {
     try {
         const data = req.body;
+        data.ipAddress = req.ip;
         const result = await service.login(data);
         res.json(result);
     } catch (err) {
@@ -15,6 +16,7 @@ async function register(req, res, next) {
     try {
         const data = req.body;
         let created_by = req.userIdToken;
+        data.ipAddress = req.ip;
 
         const isFirstUser = await service.isFirstUser();
 

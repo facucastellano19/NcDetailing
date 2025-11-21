@@ -12,13 +12,23 @@ productsRouter.get('/',
     validatorHandler(getProductsSchema, 'query'),
     getProducts)
 
-productsRouter.put('/category/:id',
+productsRouter.get('/categories',
     checkRole(1),
-    validatorHandler(deleteProductSchema, 'params'), // Reusing schema for ID validation
-    validatorHandler(postCategorySchema, 'body'),   // Reusing schema for name validation
-    putCategory
+    getCategories
 )
 
+productsRouter.post('/category',
+    checkRole(1),
+    validatorHandler(postCategorySchema, 'body'),
+    postCategory
+)
+
+productsRouter.put('/category/:id',
+    checkRole(1),
+    validatorHandler(getProductByIdSchema, 'params'), 
+    validatorHandler(postCategorySchema, 'body'),   
+    putCategory
+)
 
 productsRouter.delete('/category/:id',
     checkRole(1),
@@ -26,14 +36,9 @@ productsRouter.delete('/category/:id',
     deleteCategory
 )
 
-productsRouter.get('/categories',
-    checkRole(1),
-    getCategories
-)
-
 productsRouter.get('/category/:id',
     checkRole(1),
-    validatorHandler(getProductByIdSchema, 'params'), // Reutilizamos el schema de ID
+    validatorHandler(getProductByIdSchema, 'params'), 
     getCategoryById
 )
 
@@ -42,22 +47,16 @@ productsRouter.get('/:id',
     validatorHandler(getProductByIdSchema, 'params'),
     getProductById)
 
+productsRouter.put('/:id',
+    checkRole(1),
+    validatorHandler(getProductByIdSchema, 'params'),
+    validatorHandler(putProductSchema, 'body'),
+    putProduct)
+
 productsRouter.post('/',
     checkRole(1),
     validatorHandler(postProductSchema, 'body'),
     postProduct
-)
-
-productsRouter.put('/:id',
-    checkRole(1),
-    validatorHandler(putProductSchema, 'body'),
-    putProduct)
-
-productsRouter.patch('/:id/min-stock',
-    checkRole(1),
-    validatorHandler(getProductByIdSchema, 'params'),
-    validatorHandler(updateMinStockSchema, 'body'),
-    updateMinStock
 )
 
 productsRouter.delete('/:id',
@@ -66,10 +65,11 @@ productsRouter.delete('/:id',
     deleteProduct)
 
 
-productsRouter.post('/category',
+productsRouter.patch('/:id/min-stock',
     checkRole(1),
-    validatorHandler(postCategorySchema, 'body'),
-    postCategory
+    validatorHandler(getProductByIdSchema, 'params'),
+    validatorHandler(updateMinStockSchema, 'body'),
+    updateMinStock
 )
 
 module.exports = productsRouter

@@ -1,4 +1,5 @@
 const getConnection = require('../database/mysql');
+const auditLogService = require('./auditLogService');
 
 class ServicesService {
 
@@ -102,17 +103,49 @@ class ServicesService {
             connection = await getConnection();
             await connection.beginTransaction();
 
+            // 1. Check if a service with this name exists (active or soft-deleted)
             const [existingService] = await connection.query(
-                `SELECT id FROM services WHERE name = ? AND deleted_at IS NULL`,
+                `SELECT * FROM services WHERE name = ?`,
                 [data.name]
             );
 
             if (existingService.length > 0) {
-                const error = new Error('Service with this name already exists');
-                error.status = 409;
-                throw error;
+                const service = existingService[0];
+                if (service.deleted_at === null) {
+                    // 2. Service is active, throw conflict error
+                    const error = new Error('Service with this name already exists');
+                    error.status = 409;
+                    throw error;
+                } else {
+                    // 2a. Service is soft-deleted, so we "undelete" and update it
+                    await connection.query(
+                        `UPDATE services SET 
+                            category_id = ?, description = ?, price = ?, 
+                            deleted_at = NULL, deleted_by = NULL, 
+                            updated_at = NOW(), updated_by = ? 
+                         WHERE id = ?`,
+                        [data.category_id, data.description, data.price, data.created_by, service.id]
+                    );
+                    await connection.commit();
+
+                    // Get the full new state for auditing
+                    const [restoredServiceRows] = await connection.query(`SELECT * FROM services WHERE id = ?`, [service.id]);
+                    
+                    // Audit Log for RESTORE (as UPDATE)
+                    await auditLogService.log({
+                        userId: data.created_by,
+                        actionType: 'UPDATE',
+                        entityType: 'service',
+                        entityId: service.id,
+                        changes: { oldValue: service, newValue: restoredServiceRows[0] },
+                        ipAddress: data.ipAddress
+                    });
+
+                    return { message: 'Service restored successfully', data: restoredServiceRows[0] };
+                }
             }
 
+            // 3. Service does not exist, create a new one
             const [result] = await connection.query(
                 `INSERT INTO services 
                  (category_id, name, description, price, created_by, created_at)
@@ -122,6 +155,20 @@ class ServicesService {
 
             await connection.commit();
 
+            // Get the full new state of the service for auditing
+            const [newServiceDataResult] = await connection.query(`SELECT * FROM services WHERE id = ?`, [result.insertId]);
+            const newServiceData = newServiceDataResult[0];
+
+            // Audit Log
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'service',
+                entityId: result.insertId,
+                ipAddress: data.ipAddress,
+                changes: { newValue: newServiceData }
+            });
+
             return {
                 message: 'Service created successfully',
                 data: { id: result.insertId, ...data }
@@ -129,6 +176,15 @@ class ServicesService {
 
         } catch (err) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'service',
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: err.message
+            });
             throw err;
         } finally {
             if (connection) connection.release();
@@ -143,7 +199,7 @@ class ServicesService {
     
             // 1. Check if a category with this name exists (active or soft-deleted)
             const [existingCategory] = await connection.query(
-                `SELECT id, deleted_at FROM service_categories WHERE name = ?`,
+                `SELECT * FROM service_categories WHERE name = ?`,
                 [data.name]
             );
     
@@ -163,6 +219,20 @@ class ServicesService {
                         [data.created_by, category.id]
                     );
                     await connection.commit();
+
+                    // Get the full new state of the category for auditing
+                    const [newCategoryDataResult] = await connection.query(`SELECT * FROM service_categories WHERE id = ?`, [category.id]);
+                    const newCategoryData = newCategoryDataResult[0];
+
+                    // Audit Log for RESTORE (as UPDATE)
+                    await auditLogService.log({
+                        userId: data.created_by,
+                        actionType: 'UPDATE',
+                        entityType: 'service_category',
+                        entityId: category.id,
+                        changes: { oldValue: category, newValue: newCategoryData },
+                        ipAddress: data.ipAddress
+                    });
                     return {
                         message: 'Category restored successfully',
                         data: { id: category.id, ...data }
@@ -178,12 +248,35 @@ class ServicesService {
             );
     
             await connection.commit();
+
+            // Get the full new state of the category for auditing
+            const [newCategoryDataResult] = await connection.query(`SELECT * FROM service_categories WHERE id = ?`, [insertResult.insertId]);
+            const newCategoryData = newCategoryDataResult[0];
+
+            // Audit Log for CREATE
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'service_category',
+                entityId: insertResult.insertId,
+                ipAddress: data.ipAddress,
+                changes: { newValue: newCategoryData }
+            });
             return {
                 message: 'Category created successfully',
                 data: { id: insertResult.insertId, ...data }
             };
         } catch (err) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.created_by,
+                actionType: 'CREATE',
+                entityType: 'service_category',
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: err.message
+            });
             throw err;
         } finally {
             if (connection) connection.release();
@@ -192,12 +285,13 @@ class ServicesService {
 
     async putCategory(id, data) {
         let connection;
+        let oldCategoryData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             const [existingCategory] = await connection.query(
-                `SELECT id FROM service_categories WHERE id = ? AND deleted_at IS NULL`,
+                `SELECT * FROM service_categories WHERE id = ? AND deleted_at IS NULL`,
                 [id]
             );
             if (existingCategory.length === 0) {
@@ -205,6 +299,7 @@ class ServicesService {
                 error.status = 404;
                 throw error;
             }
+            oldCategoryData = existingCategory[0];
 
             const [conflictCategory] = await connection.query(
                 `SELECT id FROM service_categories WHERE name = ? AND id != ? AND deleted_at IS NULL`,
@@ -222,9 +317,33 @@ class ServicesService {
             );
 
             await connection.commit();
+
+            // Get the full new state of the category for auditing
+            const [newCategoryDataResult] = await connection.query(`SELECT * FROM service_categories WHERE id = ?`, [id]);
+            const newCategoryData = newCategoryDataResult[0];
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'service_category',
+                entityId: id,
+                changes: { oldValue: oldCategoryData, newValue: newCategoryData },
+                ipAddress: data.ipAddress
+            });
             return { message: 'Category updated successfully', data: { id, ...data } };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'service_category',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
@@ -233,14 +352,16 @@ class ServicesService {
 
     async deleteCategory(id, data) {
         let connection;
+        let oldCategoryData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             const [existingCategory] = await connection.query(
-                `SELECT id FROM service_categories WHERE id = ? AND deleted_at IS NULL`,
+                `SELECT * FROM service_categories WHERE id = ? AND deleted_at IS NULL`,
                 [id]
             );
+            oldCategoryData = existingCategory[0];
             if (existingCategory.length === 0) {
                 const error = new Error('Category not found');
                 error.status = 404;
@@ -263,9 +384,29 @@ class ServicesService {
             );
 
             await connection.commit();
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'service_category',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                changes: { oldValue: oldCategoryData }
+            });
             return { message: 'Category deleted successfully' };
         } catch (error) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'service_category',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: error.message
+            });
             throw error;
         } finally {
             if (connection) connection.release();
@@ -274,6 +415,7 @@ class ServicesService {
 
     async putService(id, data) {
         let connection;
+        let oldServiceData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
@@ -290,6 +432,7 @@ class ServicesService {
             }
 
             const service = existingService[0];
+            oldServiceData = existingService[0];
 
 
             const [conflictService] = await connection.query(
@@ -330,6 +473,20 @@ class ServicesService {
 
             await connection.commit();
 
+            // Get the full new state of the service for auditing
+            const [newServiceDataResult] = await connection.query(`SELECT * FROM services WHERE id = ?`, [id]);
+            const newServiceData = newServiceDataResult[0];
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'service',
+                entityId: id,
+                changes: { oldValue: oldServiceData, newValue: newServiceData },
+                ipAddress: data.ipAddress
+            });
+
             return {
                 message: 'Service updated successfully',
                 data: { id, ...data }
@@ -337,6 +494,16 @@ class ServicesService {
 
         } catch (err) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.updated_by,
+                actionType: 'UPDATE',
+                entityType: 'service',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: err.message
+            });
             throw err;
         } finally {
             if (connection) connection.release();
@@ -345,15 +512,17 @@ class ServicesService {
 
     async deleteService(id, data) {
         let connection;
+        let oldServiceData = null;
         try {
             connection = await getConnection();
             await connection.beginTransaction();
 
             const [existingService] = await connection.query(
-                `SELECT id FROM services WHERE id = ? AND deleted_at IS NULL`,
+                `SELECT * FROM services WHERE id = ? AND deleted_at IS NULL`,
                 [id]
             );
 
+            oldServiceData = existingService[0];
             if (!existingService[0]) {
                 const error = new Error('Service not found');
                 error.status = 404;
@@ -373,6 +542,16 @@ class ServicesService {
 
             await connection.commit();
 
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'service',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                changes: { oldValue: oldServiceData }
+            });
+
             return {
                 id,
                 message: 'Service deleted successfully',
@@ -381,6 +560,16 @@ class ServicesService {
 
         } catch (err) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.deleted_by,
+                actionType: 'DELETE',
+                entityType: 'service',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: err.message
+            });
             throw err;
         } finally {
             if (connection) connection.release();

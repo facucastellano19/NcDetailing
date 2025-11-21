@@ -31,6 +31,24 @@ CREATE TABLE users (
 );
 
 -- =========================================
+-- AUDIT LOG
+-- =========================================
+CREATE TABLE audit_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,                          -- Who performed the action (can be NULL for system actions)
+    action_type VARCHAR(50) NOT NULL,     -- What was the action (e.g., 'CREATE', 'UPDATE', 'LOGIN_SUCCESS')
+    entity_type VARCHAR(50),              -- On which table/entity (e.g., 'product', 'client')
+    entity_id INT,                        -- The ID of the affected record
+    changes JSON,                         -- A JSON object detailing what changed (e.g., { "old": { "price": 10 }, "new": { "price": 12 } })
+    status ENUM('SUCCESS', 'FAILURE') NOT NULL DEFAULT 'SUCCESS', -- Was the action successful?
+    error_message TEXT,                   -- If it failed, what was the error?
+    ip_address VARCHAR(45),               -- IP address of the user
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- =========================================
 -- Clients
 -- =========================================
 CREATE TABLE clients (
