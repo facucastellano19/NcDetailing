@@ -100,18 +100,6 @@ const postCategorySchema = Joi.object({
     })
 });
 
-const updateMinStockSchema = Joi.object({
-    min_stock: Joi.number().integer().min(0).required().messages({
-        'number.base': 'Min stock must be a number',
-        'number.integer': 'Min stock must be an integer',
-        'number.min': 'Min stock cannot be negative',
-        'any.required': 'Min stock is required'
-    }),
-    updated_by: Joi.number().integer().positive().forbidden().messages({
-        'any.unknown': 'Cannot send updated_by field'
-    })
-});
-
 const getProductsSchema = Joi.object({
     category_id: Joi.number().integer().positive().optional().messages({
         'number.base': 'Category ID must be a number',
@@ -130,9 +118,5 @@ module.exports = {
     putProductSchema,
     deleteProductSchema,
     postCategorySchema,
-    getProductsSchema,
-    updateMinStockSchema
+    getProductsSchema
 };
-
-
-

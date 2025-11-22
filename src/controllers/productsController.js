@@ -46,19 +46,6 @@ async function putProduct(req, res, next) {
     }
 }
 
-async function updateMinStock(req, res, next) {
-    try {
-        const id = req.params.id;
-        const { min_stock } = req.body;
-        const updated_by = req.userIdToken;
-        const ipAddress = req.ip;
-        const updatedProduct = await service.updateMinStock(id, min_stock, updated_by, ipAddress);
-        res.json(updatedProduct);
-    } catch (error) {
-        next(error);
-    }
-}
-
 async function deleteProduct(req, res, next) {
     try {
         const id = req.params.id;
@@ -126,4 +113,4 @@ async function getCategoryById(req, res, next) {
 }
 
 
-module.exports = { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory, putCategory, deleteCategory, getCategories, getCategoryById }
+module.exports = { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory, putCategory, deleteCategory, getCategories, getCategoryById }

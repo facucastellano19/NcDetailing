@@ -205,25 +205,6 @@
           "404": { "description": "Product not found" }
         }
       }
-    },
-    "/api/products/{id}/min-stock": {
-      "patch": {
-        "summary": "Update product minimum stock",
-        "tags": ["Products"],
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "example": 1 } }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductMinStockUpdate" } } }
-        },
-        "responses": {
-          "200": { "description": "Product min_stock updated successfully", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductResponse" } } } },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Product not found" }
-        }
-      }
     }
   },
   "components": {
@@ -231,9 +212,8 @@
       "CategoryPost": { "type": "object", "properties": { "name": { "type": "string", "example": "Interior Cleaning" } }, "required": ["name"] },
       "CategoryResponse": { "type": "object", "properties": { "message": { "type": "string", "example": "Category created successfully" }, "data": { "type": "object", "properties": { "id": { "type": "integer", "example": 1 }, "name": { "type": "string", "example": "Interior Cleaning" } } } } },
       "Product": { "type": "object", "properties": { "id": { "type": "integer", "example": 1 }, "name": { "type": "string", "example": "Car Shampoo" }, "description": { "type": "string", "example": "Concentrated shampoo for car washing" }, "price": { "type": "number", "format": "float", "example": 15.99 }, "stock": { "type": "integer", "example": 50 }, "min_stock": { "type": "integer", "example": 10 }, "category": { "type": "string", "example": "Exterior Cleaning" }, "lowStock": { "type": "boolean", "example": false, "readOnly": true } } },
-      "ProductPost": { "type": "object", "properties": { "name": { "type": "string", "example": "Carnauba Wax" }, "description": { "type": "string", "example": "High quality wax for shine and protection" }, "price": { "type": "number", "format": "float", "example": 25.50 }, "stock": { "type": "integer", "example": 30 }, "min_stock": { "type": "integer", "example": 5 }, "category_id": { "type": "integer", "example": 1 } }, "required": ["name","price","stock","min_stock","category_id"] },
+      "ProductPost": { "type": "object", "properties": { "name": { "type": "string", "example": "Carnauba Wax" }, "description": { "type": "string", "example": "High quality wax for shine and protection" }, "price": { "type": "number", "format": "float", "example": 25.50 }, "stock": { "type": "integer", "example": 30 }, "min_stock": { "type": "integer", "example": 5 }, "category_id": { "type": "integer", "example": 1 } }, "required": ["name", "price", "stock", "min_stock", "category_id"] },
       "ProductPut": { "type": "object", "properties": { "name": { "type": "string", "example": "Premium Carnauba Wax" }, "description": { "type": "string", "example": "High quality wax for enhanced shine and protection" }, "price": { "type": "number", "format": "float", "example": 29.99 }, "stock": { "type": "integer", "example": 35 }, "category_id": { "type": "integer", "example": 1 } } },
-      "ProductMinStockUpdate": { "type": "object", "properties": { "min_stock": { "type": "integer", "example": 7 } }, "required": ["min_stock"] },
       "ProductResponse": { "type": "object", "properties": { "message": { "type": "string", "example": "Product created/updated/retrieved successfully" }, "data": { "$ref": "#/components/schemas/Product" } } },
       "ProductResponseList": { "type": "object", "properties": { "message": { "type": "string", "example": "Products retrieved successfully" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } } } },
       "CategoriesResponseList": { "type": "object", "properties": { "message": { "type": "string", "example": "Categories retrieved successfully" }, "data": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "integer", "example": 1 }, "name": { "type": "string", "example": "Interior Cleaning" } } } } } }
