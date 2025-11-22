@@ -8,16 +8,16 @@ const servicesRouter = express.Router()
 servicesRouter.use(express.json())
 
 servicesRouter.get('/',
-    checkRole(1),
+    checkRole(1,2),
     getServices)
 
 // --- Category Routes ---
 servicesRouter.get('/categories',
-    checkRole(1),
+    checkRole(1,2),
     getCategories)
 
 servicesRouter.get('/category/:id',
-    checkRole(1),
+    checkRole(1,2),
     validatorHandler(getServiceByIdSchema, 'params'), // Reusing schema for ID validation
     getCategoryById
 )
@@ -43,7 +43,7 @@ servicesRouter.delete('/category/:id',
 
 // --- Service Routes ---
 servicesRouter.get('/:id',
-    checkRole(1),
+    checkRole(1,2),
     validatorHandler(getServiceByIdSchema, 'params'),
     getServiceById)
 

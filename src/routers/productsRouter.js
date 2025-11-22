@@ -8,12 +8,12 @@ const productsRouter = express.Router()
 productsRouter.use(express.json())
 
 productsRouter.get('/',
-    checkRole(1),
+    checkRole(1,2),
     validatorHandler(getProductsSchema, 'query'),
     getProducts)
 
 productsRouter.get('/categories',
-    checkRole(1),
+    checkRole(1,2),
     getCategories
 )
 
@@ -43,7 +43,7 @@ productsRouter.get('/category/:id',
 )
 
 productsRouter.get('/:id',
-    checkRole(1),
+    checkRole(1,2),
     validatorHandler(getProductByIdSchema, 'params'),
     getProductById)
 
