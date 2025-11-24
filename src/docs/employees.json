@@ -140,20 +140,6 @@
             "schema": { "type": "integer", "example": 1 }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "deleted_by": { "type": "integer", "example": 1 }
-                },
-                "required": ["deleted_by"]
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Employee deleted successfully",

@@ -4,6 +4,7 @@ const service = new usersService();
 async function login(req, res, next) {
     try {
         const data = req.body;
+        data.usernameToken = req.body.username; // Standardize variable for auditing
         data.ipAddress = req.ip;
         const result = await service.login(data);
         res.json(result);
@@ -16,7 +17,7 @@ async function register(req, res, next) {
     try {
         const data = req.body;
         let created_by = req.userIdToken;
-        data.ipAddress = req.ip;
+        data.usernameToken = req.usernameToken; 
 
         const isFirstUser = await service.isFirstUser();
 

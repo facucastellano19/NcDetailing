@@ -118,6 +118,7 @@ class ProductsService {
                     // Audit Log for RESTORE (as UPDATE)
                     await auditLogService.log({
                         userId: data.created_by,
+                        username: data.usernameToken,
                         actionType: 'UPDATE',
                         entityType: 'product',
                         entityId: product.id,
@@ -157,6 +158,7 @@ class ProductsService {
             // Audit Log
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'product',
                 entityId: result.insertId,
@@ -173,6 +175,7 @@ class ProductsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'product',
                 ipAddress: data.ipAddress,
@@ -244,6 +247,7 @@ class ProductsService {
             // 4. Audit Log for success
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'product',
                 entityId: id,
@@ -261,6 +265,7 @@ class ProductsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'product',
                 entityId: id,
@@ -304,6 +309,7 @@ class ProductsService {
             // Audit Log
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'product',
                 entityId: id,
@@ -320,6 +326,7 @@ class ProductsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'product',
                 entityId: id,
@@ -380,6 +387,7 @@ class ProductsService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'product_category',
                 entityId: id,
@@ -393,6 +401,7 @@ class ProductsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'product_category',
                 entityId: id,
@@ -438,6 +447,7 @@ class ProductsService {
                     // Audit Log for RESTORE (as UPDATE)
                     await auditLogService.log({
                         userId: data.created_by,
+                        username: data.usernameToken,
                         actionType: 'UPDATE',
                         entityType: 'product_category',
                         entityId: category.id,
@@ -463,6 +473,7 @@ class ProductsService {
             // Audit Log for CREATE
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'product_category',
                 entityId: insertResult.insertId,
@@ -478,6 +489,7 @@ class ProductsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'product_category',
                 ipAddress: data.ipAddress,
@@ -533,6 +545,7 @@ class ProductsService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'product_category',
                 entityId: id,
@@ -546,6 +559,7 @@ class ProductsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'product_category',
                 entityId: id,

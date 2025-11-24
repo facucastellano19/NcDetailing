@@ -214,6 +214,7 @@ class ClientsService {
             // Audit Log
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'client',
                 entityId: newCustomerId,
@@ -231,6 +232,7 @@ class ClientsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'client',
                 ipAddress: data.ipAddress,
@@ -389,6 +391,7 @@ class ClientsService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'client',
                 entityId: id,
@@ -406,6 +409,7 @@ class ClientsService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'client',
                 entityId: id,

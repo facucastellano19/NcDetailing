@@ -30,6 +30,7 @@ async function postEmployee(req, res, next) {
     try {
         const data = req.body;
         data.created_by = req.userIdToken;
+        data.usernameToken = req.usernameToken;
         data.ipAddress = req.ip;
         const newEmployee = await service.postEmployee(data);
         res.status(201).json(newEmployee);
@@ -43,6 +44,7 @@ async function putEmployee(req, res, next) {
         const id = req.params.id;
         const data = req.body;
         data.updated_by = req.userIdToken;
+        data.usernameToken = req.usernameToken;
         data.ipAddress = req.ip;
         const updatedEmployee = await service.putEmployee(id, data);
         res.json(updatedEmployee);
@@ -54,7 +56,7 @@ async function putEmployee(req, res, next) {
 async function deleteEmployee(req, res, next) {
     try {
         const id = req.params.id;
-        const data = { deleted_by: req.userIdToken, ipAddress: req.ip };
+        const data = { deleted_by: req.userIdToken, usernameToken: req.usernameToken, ipAddress: req.ip };
         result = await service.deleteEmployee(id,data);
         res.status(200).json(result);
     } catch (error) {
