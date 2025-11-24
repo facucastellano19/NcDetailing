@@ -225,13 +225,14 @@ class ProductsService {
             // 3. Update product
             await connection.query(
                 `UPDATE products
-                 SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
+                 SET name = ?, description = ?, price = ?, stock = ?, min_stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
                  WHERE id = ?`,
                 [
                     data.name ?? product.name,
                     data.description ?? product.description,
                     data.price ?? product.price,
                     data.stock ?? product.stock,
+                    data.min_stock ?? product.min_stock,
                     data.category_id ?? product.category_id,
                     data.updated_by,
                     id
