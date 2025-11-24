@@ -11,22 +11,35 @@ class ProductsService {
         let connection;
         try {
             connection = await getConnection();
+            const { name, category_id, status = 'active' } = params;
+
             let query = `
                 SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
                 FROM products p
                 INNER JOIN product_categories pc ON p.category_id = pc.id
-                WHERE p.deleted_at IS NULL
             `;
             const queryParams = [];
+            const whereConditions = [];
 
-            if (params.category_id) {
-                query += ` AND p.category_id = ?`;
-                queryParams.push(params.category_id);
+            if (status === 'active') {
+                whereConditions.push('p.deleted_at IS NULL');
+            } else if (status === 'inactive') {
+                whereConditions.push('p.deleted_at IS NOT NULL');
+            }
+            // If status is 'all', no condition is added for deleted_at.
+
+            if (category_id) {
+                whereConditions.push(`p.category_id = ?`);
+                queryParams.push(category_id);
             }
 
             if (params.name) {
                 query += ` AND p.name LIKE ?`;
                 queryParams.push(`%${params.name}%`);
+            }
+
+            if (whereConditions.length > 0) {
+                query += ' WHERE ' + whereConditions.join(' AND ');
             }
 
             query += ` ORDER BY p.name`;
@@ -274,6 +287,64 @@ class ProductsService {
                 status: 'FAILURE',
                 errorMessage: error.message
             });
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async restoreProduct(id, data) {
+        let connection;
+        let oldProductData = null;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Find the soft-deleted product
+            const [products] = await connection.query(
+                `SELECT * FROM products WHERE id = ? AND deleted_at IS NOT NULL`,
+                [id]
+            );
+
+            if (!products[0]) {
+                const error = new Error('Inactive product not found or is already active.');
+                error.status = 404;
+                throw error;
+            }
+            oldProductData = products[0];
+
+            // 2. Restore the product
+            await connection.query(
+                `UPDATE products SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.updated_by, id]
+            );
+
+            await connection.commit();
+
+            // 3. Get the new state for auditing
+            const [newProductDataResult] = await connection.query(
+                `SELECT * FROM products WHERE id = ?`,
+                [id]
+            );
+            const newProductData = newProductDataResult[0];
+
+            // 4. Audit the restoration
+            await auditLogService.log({
+                userId: data.updated_by,
+                username: data.usernameToken,
+                actionType: 'UPDATE',
+                entityType: 'product',
+                entityId: id,
+                changes: { oldValue: oldProductData, newValue: newProductData },
+                ipAddress: data.ipAddress
+            });
+
+            return { message: 'Product restored successfully', data: { id: newProductData.id, name: newProductData.name } };
+
+        } catch (error) {
+            if (connection) await connection.rollback();
+            // Audit log for failure is omitted here as it would be complex to log without old data
+            // and the primary failure case is a 404, which is self-explanatory.
             throw error;
         } finally {
             if (connection) connection.release();
@@ -574,13 +645,75 @@ class ProductsService {
         }
     }
 
-    async getCategories() {
+    async restoreCategory(id, data) {
+        let connection;
+        let oldCategoryData = null;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Find the soft-deleted category
+            const [categories] = await connection.query(
+                `SELECT * FROM product_categories WHERE id = ? AND deleted_at IS NOT NULL`,
+                [id]
+            );
+
+            if (!categories[0]) {
+                const error = new Error('Inactive product category not found or is already active.');
+                error.status = 404;
+                throw error;
+            }
+            oldCategoryData = categories[0];
+
+            // 2. Restore the category
+            await connection.query(
+                `UPDATE product_categories SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.updated_by, id]
+            );
+
+            await connection.commit();
+
+            // 3. Get the new state for auditing
+            const [newCategoryDataResult] = await connection.query(
+                `SELECT * FROM product_categories WHERE id = ?`,
+                [id]
+            );
+            const newCategoryData = newCategoryDataResult[0];
+
+            // 4. Audit the restoration
+            await auditLogService.log({
+                userId: data.updated_by,
+                username: data.usernameToken,
+                actionType: 'UPDATE',
+                entityType: 'product_category',
+                entityId: id,
+                changes: { oldValue: oldCategoryData, newValue: newCategoryData },
+                ipAddress: data.ipAddress
+            });
+
+            return { message: 'Product category restored successfully', data: { id: newCategoryData.id, name: newCategoryData.name } };
+
+        } catch (error) {
+            if (connection) await connection.rollback();
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async getCategories(params = {}) {
         let connection;
         try {
             connection = await getConnection();
-            const [categories] = await connection.query(
-                `SELECT id, name FROM product_categories WHERE deleted_at IS NULL ORDER BY name`
-            );
+            const { status = 'active' } = params;
+            let query = `SELECT id, name FROM product_categories`;
+
+            if (status === 'active') query += ' WHERE deleted_at IS NULL';
+            else if (status === 'inactive') query += ' WHERE deleted_at IS NOT NULL';
+
+            query += ' ORDER BY name';
+
+            const [categories] = await connection.query(query);
             return {
                 message: 'Categories retrieved successfully',
                 data: categories

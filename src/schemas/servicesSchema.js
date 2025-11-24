@@ -1,5 +1,18 @@
 const Joi = require('joi');
 
+const getServicesSchema = Joi.object({
+    name: Joi.string().max(100).optional(),
+    category: Joi.string().max(100).optional(),
+    status: Joi.string().valid('active', 'inactive', 'all').optional().messages({
+        'string.base': 'Status must be a string',
+        'any.only': 'Status must be one of [active, inactive, all]'
+    }),
+    categoryStatus: Joi.string().valid('active', 'inactive', 'all').optional().messages({
+        'string.base': 'Status must be a string',
+        'any.only': 'Status must be one of [active, inactive, all]'
+    })
+});
+
 const getServiceByIdSchema = Joi.object({
     id: Joi.number().integer().positive().required().messages({
         'number.base': 'ID must be a number',
@@ -84,6 +97,7 @@ const postCategorySchema = Joi.object({
 });
 
 module.exports = {
+    getServicesSchema,
     getServiceByIdSchema,
     postServiceSchema,
     putServiceSchema,

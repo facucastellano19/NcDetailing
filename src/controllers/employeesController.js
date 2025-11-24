@@ -3,7 +3,7 @@ const service = new employeesService();
 
 async function getEmployees(req, res, next) {
     try {
-        const employees = await service.getEmployees();
+        const employees = await service.getEmployees(req.query);
         res.json(employees);
     } catch (error) {
         next(error);
@@ -64,4 +64,19 @@ async function deleteEmployee(req, res, next) {
     }  
 }
 
-module.exports = { getEmployees, getEmployeeById, postEmployee, putEmployee, deleteEmployee }
+async function restoreEmployee(req, res, next) {
+    try {
+        const { id } = req.params;
+        const data = {
+            updated_by: req.userIdToken,
+            usernameToken: req.usernameToken,
+            ipAddress: req.ip
+        };
+        const result = await service.restoreEmployee(id, data);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = { getEmployees, getEmployeeById, postEmployee, putEmployee, deleteEmployee, restoreEmployee }

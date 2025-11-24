@@ -1,5 +1,12 @@
 const Joi = require('joi');
 
+const getEmployeesSchema = Joi.object({
+    status: Joi.string().valid('active', 'inactive', 'all').optional().messages({
+        'string.base': 'Status must be a string',
+        'any.only': 'Status must be one of [active, inactive, all]'
+    })
+});
+
 const getEmployeeByIdSchema = Joi.object({
     id: Joi.number().integer().positive().required()
 });
@@ -72,6 +79,7 @@ const deleteEmployeeSchema = Joi.object({
 });
 
 module.exports = {
+    getEmployeesSchema,
     getEmployeeByIdSchema,
     putEmployeeSchema,
     deleteEmployeeSchema

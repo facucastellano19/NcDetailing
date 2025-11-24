@@ -6,13 +6,26 @@ const auditLogService = require('./auditLogService');
 
 class EmployeesService {
 
-    async getEmployees() {
+    async getEmployees(params = {}) {
         let connection;
         try {
             connection = await getConnection();
-            const query = `
+            const { status = 'active' } = params; // Default to active employees
+
+            let query = `
                 SELECT id, name, username, email
-                FROM users where deleted_at IS NULL AND role_id = 2`
+                FROM users 
+                WHERE role_id = 2`;
+
+            if (status === 'active') {
+                query += ' AND deleted_at IS NULL';
+            } else if (status === 'inactive') {
+                query += ' AND deleted_at IS NOT NULL';
+            }
+            // If status is 'all', no additional condition is needed.
+
+            query += ' ORDER BY name';
+
             const [employees] = await connection.query(query);
             return {
                 message: 'Employees retrieved successfully',
@@ -139,6 +152,65 @@ class EmployeesService {
                 status: 'FAILURE',
                 errorMessage: error.message
             });
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async restoreEmployee(id, data) {
+        let connection;
+        let oldEmployeeData = null;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Find the soft-deleted employee
+            const [employees] = await connection.query(
+                `SELECT * FROM users WHERE id = ? AND role_id = 2 AND deleted_at IS NOT NULL`,
+                [id]
+            );
+
+            if (!employees[0]) {
+                const error = new Error('Inactive employee not found or is already active.');
+                error.status = 404;
+                throw error;
+            }
+            oldEmployeeData = employees[0];
+            delete oldEmployeeData.password; // Don't log the password
+
+            // 2. Restore the employee
+            await connection.query(
+                `UPDATE users SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.updated_by, id]
+            );
+
+            await connection.commit();
+
+            // 3. Get the new state for auditing
+            const [newEmployeeDataResult] = await connection.query(
+                `SELECT id, name, username, email, role_id, updated_at, updated_by FROM users WHERE id = ?`,
+                [id]
+            );
+            const newEmployeeData = newEmployeeDataResult[0];
+
+            // 4. Audit the restoration
+            await auditLogService.log({
+                userId: data.updated_by,
+                username: data.usernameToken,
+                actionType: 'UPDATE',
+                entityType: 'employee',
+                entityId: id,
+                changes: { oldValue: oldEmployeeData, newValue: newEmployeeData },
+                ipAddress: data.ipAddress
+            });
+
+            return { message: 'Employee restored successfully', data: newEmployeeData };
+
+        } catch (error) {
+            if (connection) await connection.rollback();
+            // Audit log for failure is omitted here as it would be complex to log without old data
+            // and the primary failure case is a 404, which is self-explanatory.
             throw error;
         } finally {
             if (connection) connection.release();

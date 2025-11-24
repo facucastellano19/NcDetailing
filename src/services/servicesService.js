@@ -3,11 +3,12 @@ const auditLogService = require('./auditLogService');
 
 class ServicesService {
 
-    async getServices(name, category) {
+    async getServices(params = {}) {
         let connection;
         try {
             connection = await getConnection();
-            let query = `
+            const { name, category, status = 'active' } = params;
+            let baseQuery = `
                 SELECT
                     s.id,
                     s.name,
@@ -16,23 +17,33 @@ class ServicesService {
                     sc.name AS category
                 FROM services s
                 JOIN service_categories sc ON s.category_id = sc.id
-                WHERE s.deleted_at IS NULL
             `;
-            const params = [];
+            const whereConditions = [];
+            const queryParams = [];
+
+            if (status === 'active') {
+                whereConditions.push('s.deleted_at IS NULL');
+            } else if (status === 'inactive') {
+                whereConditions.push('s.deleted_at IS NOT NULL');
+            }
 
             if (name) {
-                query += ` AND s.name LIKE ?`;
-                params.push(`%${name}%`);
+                whereConditions.push(`s.name LIKE ?`);
+                queryParams.push(`%${name}%`);
             }
 
             if (category) {
-                query += ` AND sc.name LIKE ?`;
-                params.push(`%${category}%`);
+                whereConditions.push(`sc.name LIKE ?`);
+                queryParams.push(`%${category}%`);
             }
 
-            query += ` ORDER BY s.id`;
+            if (whereConditions.length > 0) {
+                baseQuery += ' WHERE ' + whereConditions.join(' AND ');
+            }
 
-            const [services] = await connection.query(query, params);
+            baseQuery += ` ORDER BY s.name`;
+
+            const [services] = await connection.query(baseQuery, queryParams);
             return {
                 message: 'Services retrieved successfully',
                 data: services
@@ -77,16 +88,19 @@ class ServicesService {
         }
     }
 
-    async getCategories() {
+    async getCategories(params = {}) {
         let connection;
         try {
             connection = await getConnection();
-            const query = `
+            const { status = 'active' } = params;
+            let query = `
                 SELECT id, name
                 FROM service_categories
-                WHERE deleted_at IS NULL
-                ORDER BY name
             `;
+            if (status === 'active') query += ' WHERE deleted_at IS NULL';
+            else if (status === 'inactive') query += ' WHERE deleted_at IS NOT NULL';
+
+            query += ' ORDER BY name';
             const [categories] = await connection.query(query);
             return {
                 message: 'Service categories retrieved successfully',
@@ -585,6 +599,122 @@ class ServicesService {
                 errorMessage: err.message
             });
             throw err;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async restoreService(id, data) {
+        let connection;
+        let oldServiceData = null;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Find the soft-deleted service
+            const [services] = await connection.query(
+                `SELECT * FROM services WHERE id = ? AND deleted_at IS NOT NULL`,
+                [id]
+            );
+
+            if (!services[0]) {
+                const error = new Error('Inactive service not found or is already active.');
+                error.status = 404;
+                throw error;
+            }
+            oldServiceData = services[0];
+
+            // 2. Restore the service
+            await connection.query(
+                `UPDATE services SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.updated_by, id]
+            );
+
+            await connection.commit();
+
+            // 3. Get the new state for auditing
+            const [newServiceDataResult] = await connection.query(
+                `SELECT * FROM services WHERE id = ?`,
+                [id]
+            );
+            const newServiceData = newServiceDataResult[0];
+
+            // 4. Audit the restoration
+            await auditLogService.log({
+                userId: data.updated_by,
+                username: data.usernameToken,
+                actionType: 'UPDATE',
+                entityType: 'service',
+                entityId: id,
+                changes: { oldValue: oldServiceData, newValue: newServiceData },
+                ipAddress: data.ipAddress
+            });
+
+            return { message: 'Service restored successfully', data: { id: newServiceData.id, name: newServiceData.name } };
+
+        } catch (error) {
+            if (connection) await connection.rollback();
+            // Audit log for failure is omitted here as it would be complex to log without old data
+            // and the primary failure case is a 404, which is self-explanatory.
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    async restoreCategory(id, data) {
+        let connection;
+        let oldCategoryData = null;
+        try {
+            connection = await getConnection();
+            await connection.beginTransaction();
+
+            // 1. Find the soft-deleted category
+            const [categories] = await connection.query(
+                `SELECT * FROM service_categories WHERE id = ? AND deleted_at IS NOT NULL`,
+                [id]
+            );
+
+            if (!categories[0]) {
+                const error = new Error('Inactive service category not found or is already active.');
+                error.status = 404;
+                throw error;
+            }
+            oldCategoryData = categories[0];
+
+            // 2. Restore the category
+            await connection.query(
+                `UPDATE service_categories SET deleted_at = NULL, deleted_by = NULL, updated_at = NOW(), updated_by = ? WHERE id = ?`,
+                [data.updated_by, id]
+            );
+
+            await connection.commit();
+
+            // 3. Get the new state for auditing
+            const [newCategoryDataResult] = await connection.query(
+                `SELECT * FROM service_categories WHERE id = ?`,
+                [id]
+            );
+            const newCategoryData = newCategoryDataResult[0];
+
+            // 4. Audit the restoration
+            await auditLogService.log({
+                userId: data.updated_by,
+                username: data.usernameToken,
+                actionType: 'UPDATE',
+                entityType: 'service_category',
+                entityId: id,
+                changes: { oldValue: oldCategoryData, newValue: newCategoryData },
+                ipAddress: data.ipAddress
+            });
+
+            return { message: 'Service category restored successfully', data: { id: newCategoryData.id, name: newCategoryData.name } };
+
+        } catch (error) {
+            if (connection) await connection.rollback();
+            // Audit log for failure is omitted here as it would be complex to log without old data
+            // and the primary failure case is a 404, which is self-explanatory.
+            throw error;
         } finally {
             if (connection) connection.release();
         }

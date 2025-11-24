@@ -1,6 +1,6 @@
 const express = require('express')
-const { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory, putCategory, deleteCategory, getCategoryById } = require('../controllers/servicesController');
-const { getServiceByIdSchema, postServiceSchema, putServiceSchema, deleteServiceSchema, postCategorySchema } = require('../schemas/servicesSchema');
+const { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory, putCategory, deleteCategory, getCategoryById, restoreService, restoreCategory } = require('../controllers/servicesController');
+const { getServicesSchema, getServiceByIdSchema, postServiceSchema, putServiceSchema, deleteServiceSchema, postCategorySchema } = require('../schemas/servicesSchema');
 const {validatorHandler} = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 
@@ -9,11 +9,13 @@ servicesRouter.use(express.json())
 
 servicesRouter.get('/',
     checkRole(1,2),
+    validatorHandler(getServicesSchema, 'query'),
     getServices)
 
 // --- Category Routes ---
 servicesRouter.get('/categories',
     checkRole(1,2),
+    validatorHandler(getServicesSchema, 'query'), // Re-using schema for status filter
     getCategories)
 
 servicesRouter.get('/category/:id',
@@ -41,6 +43,12 @@ servicesRouter.delete('/category/:id',
     deleteCategory
 )
 
+servicesRouter.patch('/category/:id/restore',
+    checkRole(1),
+    validatorHandler(getServiceByIdSchema, 'params'),
+    restoreCategory
+);
+
 // --- Service Routes ---
 servicesRouter.get('/:id',
     checkRole(1,2),
@@ -62,6 +70,12 @@ servicesRouter.delete('/:id',
     checkRole(1),
     validatorHandler(deleteServiceSchema, 'params'),
     deleteService)
+
+servicesRouter.patch('/:id/restore',
+    checkRole(1),
+    validatorHandler(getServiceByIdSchema, 'params'),
+    restoreService
+);
 
 
 module.exports = servicesRouter

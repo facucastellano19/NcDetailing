@@ -3,8 +3,8 @@ const service = new ProductsService();
 
 async function getProducts(req, res, next) {
     try {
-        const { name, category_id } = req.query;
-        const products = await service.getProducts({ name, category_id });
+        // Pass all query params to the service for filtering
+        const products = await service.getProducts(req.query);
         res.json(products);
     } catch (error) {
         next(error);
@@ -48,6 +48,21 @@ async function putProduct(req, res, next) {
     }
 }
 
+async function restoreProduct(req, res, next) {
+    try {
+        const { id } = req.params;
+        const data = {
+            updated_by: req.userIdToken,
+            usernameToken: req.usernameToken,
+            ipAddress: req.ip
+        };
+        const result = await service.restoreProduct(id, data);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
 async function deleteProduct(req, res, next) {
     try {
         const id = req.params.id;
@@ -86,6 +101,21 @@ async function putCategory(req, res, next) {
     }
 }
 
+async function restoreCategory(req, res, next) {
+    try {
+        const { id } = req.params;
+        const data = {
+            updated_by: req.userIdToken,
+            usernameToken: req.usernameToken,
+            ipAddress: req.ip
+        };
+        const result = await service.restoreCategory(id, data);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
 async function deleteCategory(req, res, next) {
     try {
         const id = req.params.id;
@@ -99,7 +129,7 @@ async function deleteCategory(req, res, next) {
 
 async function getCategories(req, res, next) {
     try {
-        const categories = await service.getCategories();
+        const categories = await service.getCategories(req.query);
         res.json(categories);
     } catch (error) {
         next(error);
@@ -117,4 +147,4 @@ async function getCategoryById(req, res, next) {
 }
 
 
-module.exports = { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory, putCategory, deleteCategory, getCategories, getCategoryById }
+module.exports = { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory, putCategory, deleteCategory, getCategories, getCategoryById, restoreProduct, restoreCategory }
