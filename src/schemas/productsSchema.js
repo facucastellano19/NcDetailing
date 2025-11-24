@@ -114,6 +114,10 @@ const getProductsSchema = Joi.object({
     name: Joi.string().max(100).optional().messages({
         'string.base': 'Name must be text',
         'string.max': 'Name cannot exceed 100 characters'
+    }),
+    status: Joi.string().valid('active', 'inactive', 'all').optional().messages({
+        'string.base': 'Status must be a string',
+        'any.only': 'Status must be one of [active, inactive, all]'
     })
 });
 

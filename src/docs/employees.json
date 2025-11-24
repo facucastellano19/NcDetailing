@@ -163,33 +163,35 @@
           "401": { "description": "Unauthorized" },
           "404": { "description": "Employee not found" }
         }
-      },
-      "patch": {
-        "summary": "Restore a soft-deleted employee (admin only)",
-        "tags": ["Employees"],
-        "security": [
-          { "bearerAuth": [] }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "The ID of the employee to restore.",
-            "schema": { "type": "integer", "example": 1 }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Employee restored successfully",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/EmployeeResponse" } }
-            }
-          },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Inactive employee not found or is already active." }
-        }
       }
+    },
+    "/api/employees/{id}/restore": {
+        "patch": {
+            "summary": "Restore a soft-deleted employee (admin only)",
+            "tags": ["Employees"],
+            "security": [
+                { "bearerAuth": [] }
+            ],
+            "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "description": "The ID of the employee to restore.",
+                    "schema": { "type": "integer", "example": 1 }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Employee restored successfully",
+                    "content": {
+                        "application/json": { "schema": { "$ref": "#/components/schemas/EmployeeResponse" } }
+                    }
+                },
+                "401": { "description": "Unauthorized" },
+                "404": { "description": "Inactive employee not found or is already active." }
+            }
+        }
     }
   },
   "components": {

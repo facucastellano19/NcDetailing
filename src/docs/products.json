@@ -28,6 +28,15 @@
             "required": false,
             "schema": { "type": "string", "example": "Shampoo" },
             "description": "Filter products by name (partial match)"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter products by status. Defaults to 'active'.",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "inactive", "all"]
+            }
           }
         ],
         "responses": {
@@ -205,6 +214,34 @@
           "404": { "description": "Product not found" }
         }
       }
+    },
+    "/api/products/{id}/restore": {
+        "patch": {
+            "summary": "Restore a soft-deleted product (admin only)",
+            "tags": ["Products"],
+            "security": [
+                { "bearerAuth": [] }
+            ],
+            "parameters": [
+                {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "description": "The ID of the product to restore.",
+                    "schema": { "type": "integer", "example": 1 }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Product restored successfully",
+                    "content": {
+                        "application/json": { "schema": { "$ref": "#/components/schemas/ProductResponse" } }
+                    }
+                },
+                "401": { "description": "Unauthorized" },
+                "404": { "description": "Inactive product not found or is already active." }
+            }
+        }
     }
   },
   "components": {
