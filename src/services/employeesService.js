@@ -150,12 +150,13 @@ class EmployeesService {
         let oldEmployeeData = null;
         try {
             connection = await getConnection();
-            const queryEmployeExists = `SELECT *
+            const queryEmployeExists = `SELECT id, name, username, email, role_id, created_at, updated_at
                 FROM users where deleted_at IS NULL AND role_id = 2 AND id = ?`
 
             const [employees] = await connection.query(queryEmployeExists, [id]);
 
             oldEmployeeData = employees[0];
+
             if (!employees[0]) {
                 const error = new Error('Employee not found');
                 error.status = 404;
