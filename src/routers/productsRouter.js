@@ -1,6 +1,6 @@
 const express = require('express')
-const { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory, getCategories, deleteCategory, putCategory, getCategoryById, restoreProduct } = require('../controllers/productsController');
-const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema, getProductsSchema } = require('../schemas/productsSchema');
+const { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory, getCategories, deleteCategory, putCategory, getCategoryById, restoreProduct, restoreCategory } = require('../controllers/productsController');
+const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema, getProductsSchema, getCategoriesSchema } = require('../schemas/productsSchema');
 const { validatorHandler } = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 
@@ -14,6 +14,7 @@ productsRouter.get('/',
 
 productsRouter.get('/categories',
     checkRole(1,2),
+    validatorHandler(getCategoriesSchema, 'query'),
     getCategories
 )
 
@@ -35,6 +36,12 @@ productsRouter.delete('/category/:id',
     validatorHandler(deleteProductSchema, 'params'),
     deleteCategory
 )
+
+productsRouter.patch('/category/:id/restore',
+    checkRole(1),
+    validatorHandler(getProductByIdSchema, 'params'),
+    restoreCategory
+);
 
 productsRouter.get('/category/:id',
     checkRole(1),

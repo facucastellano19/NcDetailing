@@ -3,8 +3,7 @@ const service = new servicesService();
 
 async function getServices(req, res, next) {
     try {
-        const { name, category } = req.query;
-        const services = await service.getServices(name, category);
+        const services = await service.getServices(req.query);
         res.json(services);
     } catch (error) {
         next(error);
@@ -59,10 +58,24 @@ async function deleteService(req, res, next) {
     }  
 }
 
+async function restoreService(req, res, next) {
+    try {
+        const { id } = req.params;
+        const data = {
+            updated_by: req.userIdToken,
+            usernameToken: req.usernameToken,
+            ipAddress: req.ip
+        };
+        const result = await service.restoreService(id, data);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+}
 
 async function getCategories(req, res, next) {
     try {
-        const categories = await service.getCategories();
+        const categories = await service.getCategories(req.query);
         res.json(categories);
     } catch (error) {
         next(error);
@@ -108,6 +121,21 @@ async function deleteCategory(req, res, next) {
     }
 }
 
+async function restoreCategory(req, res, next) {
+    try {
+        const { id } = req.params;
+        const data = {
+            updated_by: req.userIdToken,
+            usernameToken: req.usernameToken,
+            ipAddress: req.ip
+        };
+        const result = await service.restoreCategory(id, data);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
 async function getCategoryById(req, res, next) {
     try {
         const { id } = req.params;
@@ -118,4 +146,4 @@ async function getCategoryById(req, res, next) {
     }
 }
 
-module.exports = { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory, putCategory, deleteCategory, getCategoryById }
+module.exports = { getServices, getServiceById, postService, putService, deleteService, getCategories, postCategory, putCategory, deleteCategory, getCategoryById, restoreService, restoreCategory }

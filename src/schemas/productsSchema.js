@@ -121,11 +121,19 @@ const getProductsSchema = Joi.object({
     })
 });
 
+const getCategoriesSchema = Joi.object({
+    status: Joi.string().valid('active', 'inactive', 'all').optional().messages({
+        'string.base': 'Status must be a string',
+        'any.only': 'Status must be one of [active, inactive, all]'
+    })
+});
+
 module.exports = {
     getProductByIdSchema,
     postProductSchema,
     putProductSchema,
     deleteProductSchema,
     postCategorySchema,
-    getProductsSchema
+    getProductsSchema,
+    getCategoriesSchema
 };
