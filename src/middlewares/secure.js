@@ -30,7 +30,9 @@ function checkRole(...allowedRoles) {
 
             req.userIdToken = data.id;
             req.role = data.role_id;
-            next();
+            req.usernameToken = data.username;
+
+            next(); 
 
         } catch (err) {
             next(err);

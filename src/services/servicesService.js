@@ -134,6 +134,7 @@ class ServicesService {
                     // Audit Log for RESTORE (as UPDATE)
                     await auditLogService.log({
                         userId: data.created_by,
+                        username: data.usernameToken,
                         actionType: 'UPDATE',
                         entityType: 'service',
                         entityId: service.id,
@@ -162,6 +163,7 @@ class ServicesService {
             // Audit Log
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'service',
                 entityId: result.insertId,
@@ -179,6 +181,7 @@ class ServicesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'service',
                 ipAddress: data.ipAddress,
@@ -227,6 +230,7 @@ class ServicesService {
                     // Audit Log for RESTORE (as UPDATE)
                     await auditLogService.log({
                         userId: data.created_by,
+                        username: data.usernameToken,
                         actionType: 'UPDATE',
                         entityType: 'service_category',
                         entityId: category.id,
@@ -256,6 +260,7 @@ class ServicesService {
             // Audit Log for CREATE
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'service_category',
                 entityId: insertResult.insertId,
@@ -271,6 +276,7 @@ class ServicesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'service_category',
                 ipAddress: data.ipAddress,
@@ -325,6 +331,7 @@ class ServicesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'service_category',
                 entityId: id,
@@ -337,6 +344,7 @@ class ServicesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'service_category',
                 entityId: id,
@@ -388,6 +396,7 @@ class ServicesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'service_category',
                 entityId: id,
@@ -400,6 +409,7 @@ class ServicesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'service_category',
                 entityId: id,
@@ -480,6 +490,7 @@ class ServicesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'service',
                 entityId: id,
@@ -497,6 +508,7 @@ class ServicesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'service',
                 entityId: id,
@@ -545,6 +557,7 @@ class ServicesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'service',
                 entityId: id,
@@ -563,6 +576,7 @@ class ServicesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'service',
                 entityId: id,

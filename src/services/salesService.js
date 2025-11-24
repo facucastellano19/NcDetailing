@@ -186,6 +186,7 @@ class SalesService {
                 // Audit the stock change for each product
                 await auditLogService.log({
                     userId: data.created_by,
+                    username: data.usernameToken,
                     actionType: 'UPDATE',
                     entityType: 'product',
                     entityId: item.product_id,
@@ -211,6 +212,7 @@ class SalesService {
             // Audit Log
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'sale_product',
                 entityId: saleId,
@@ -228,6 +230,7 @@ class SalesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'sale_product',
                 ipAddress: data.ipAddress,
@@ -447,6 +450,7 @@ class SalesService {
             // Audit Log
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'sale_service',
                 entityId: saleId,
@@ -464,6 +468,7 @@ class SalesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'sale_service',
                 ipAddress: data.ipAddress,
@@ -495,7 +500,7 @@ class SalesService {
 
     }
 
-    async updatePaymentStatus(saleId, { payment_status_id, updated_by, ipAddress }) {
+    async updatePaymentStatus(saleId, { payment_status_id, updated_by, usernameToken, ipAddress }) {
         let connection;
         let oldSaleData = null;
         try {
@@ -558,6 +563,7 @@ class SalesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: updated_by,
+                username: usernameToken,
                 actionType: 'UPDATE',
                 entityType: entityType,
                 entityId: saleId,
@@ -577,6 +583,7 @@ class SalesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: updated_by,
+                username: usernameToken,
                 actionType: 'UPDATE',
                 entityType: entityType,
                 entityId: saleId,
@@ -590,7 +597,7 @@ class SalesService {
         }
     }
 
-    async updateServiceStatus(saleId, { service_status_id, updated_by, ipAddress }) {
+    async updateServiceStatus(saleId, { service_status_id, updated_by, usernameToken, ipAddress }) {
         let connection;
         let oldSaleData = null;
         try {
@@ -629,6 +636,7 @@ class SalesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: updated_by,
+                username: usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'sale_service',
                 entityId: saleId,
@@ -645,6 +653,7 @@ class SalesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: updated_by,
+                username: usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'sale_service',
                 entityId: saleId,

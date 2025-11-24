@@ -36,6 +36,7 @@ CREATE TABLE users (
 CREATE TABLE audit_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,                          -- Who performed the action (can be NULL for system actions)
+    username VARCHAR(50),                 -- The username of the user who performed the action
     action_type VARCHAR(50) NOT NULL,     -- What was the action (e.g., 'CREATE', 'UPDATE', 'LOGIN_SUCCESS')
     entity_type VARCHAR(50),              -- On which table/entity (e.g., 'product', 'client')
     entity_id INT,                        -- The ID of the affected record

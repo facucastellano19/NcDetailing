@@ -115,6 +115,7 @@ class EmployeesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'employee',
                 entityId: id,
@@ -130,6 +131,7 @@ class EmployeesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.updated_by,
+                username: data.usernameToken,
                 actionType: 'UPDATE',
                 entityType: 'employee',
                 entityId: id,
@@ -173,6 +175,7 @@ class EmployeesService {
             // Audit Log for success
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'employee',
                 entityId: id,
@@ -189,6 +192,7 @@ class EmployeesService {
             // Audit Log for failure
             await auditLogService.log({
                 userId: data.deleted_by,
+                username: data.usernameToken,
                 actionType: 'DELETE',
                 entityType: 'employee',
                 entityId: id,

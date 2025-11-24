@@ -5,6 +5,7 @@ class AuditLogService {
      * Logs an action to the audit_log table.
      * @param {object} logData - The data to log.
      * @param {number} logData.userId - The ID of the user performing the action.
+     * @param {string} [logData.username] - The username of the user.
      * @param {string} logData.actionType - The type of action (CREATE, UPDATE, DELETE, etc.).
      * @param {string} logData.entityType - The type of entity being affected (e.g., 'product').
      * @param {number} logData.entityId - The ID of the entity.
@@ -18,6 +19,7 @@ class AuditLogService {
         try {
             const {
                 userId,
+                username = null,
                 actionType,
                 entityType,
                 entityId,
@@ -29,12 +31,12 @@ class AuditLogService {
 
             connection = await getConnection();
             const query = `
-                INSERT INTO audit_log (user_id, action_type, entity_type, entity_id, changes, status, error_message, ip_address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO audit_log (user_id, username, action_type, entity_type, entity_id, changes, status, error_message, ip_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             // Convert changes object to a JSON string for storing
             const changesJson = changes ? JSON.stringify(changes) : null;
-            await connection.query(query, [userId, actionType, entityType, entityId, changesJson, status, errorMessage, ipAddress]);
+            await connection.query(query, [userId, username, actionType, entityType, entityId, changesJson, status, errorMessage, ipAddress]);
         } catch (error) {
             console.error('Failed to write to audit log:', error);
         } finally {

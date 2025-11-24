@@ -22,6 +22,7 @@ class UsersService {
                 // Audit Log for failed login (user not found)
                 await auditLogService.log({
                     actionType: 'LOGIN_FAIL',
+                    username: data.usernameToken,
                     entityType: 'user',
                     status: 'FAILURE',
                     errorMessage: `Login attempt for non-existent user: ${data.username}`,
@@ -39,6 +40,7 @@ class UsersService {
                 // Audit Log for failed login (invalid password)
                 await auditLogService.log({
                     userId: id,
+                    username: data.usernameToken,
                     actionType: 'LOGIN_FAIL',
                     entityType: 'user',
                     entityId: id,
@@ -56,6 +58,7 @@ class UsersService {
             // Audit Log for successful login
             await auditLogService.log({
                 userId: id,
+                username: data.usernameToken,
                 actionType: 'LOGIN_SUCCESS',
                 entityType: 'user',
                 entityId: id,
@@ -104,6 +107,7 @@ class UsersService {
                     const [restoredUserRows] = await connection.query(`SELECT id, name, email, username, role_id, created_at, created_by FROM users WHERE id = ?`, [user.id]);
                     await auditLogService.log({
                         userId: data.created_by,
+                        username: data.usernameToken,
                         actionType: 'UPDATE',
                         entityType: 'user',
                         entityId: user.id,
@@ -141,6 +145,7 @@ class UsersService {
             // Audit Log for successful registration
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'user',
                 entityId: result.insertId,
@@ -160,6 +165,7 @@ class UsersService {
             // Audit Log for failed registration
             await auditLogService.log({
                 userId: data.created_by,
+                username: data.usernameToken,
                 actionType: 'CREATE',
                 entityType: 'user',
                 ipAddress: data.ipAddress,
