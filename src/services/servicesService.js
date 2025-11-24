@@ -650,7 +650,7 @@ class ServicesService {
                 ipAddress: data.ipAddress
             });
 
-            return { message: 'Service restored successfully', data: newServiceData };
+            return { message: 'Service restored successfully', data: { id: newServiceData.id, name: newServiceData.name } };
 
         } catch (error) {
             if (connection) await connection.rollback();
@@ -708,7 +708,7 @@ class ServicesService {
                 ipAddress: data.ipAddress
             });
 
-            return { message: 'Service category restored successfully', data: newCategoryData };
+            return { message: 'Service category restored successfully', data: { id: newCategoryData.id, name: newCategoryData.name } };
 
         } catch (error) {
             if (connection) await connection.rollback();

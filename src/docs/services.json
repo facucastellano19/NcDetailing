@@ -257,7 +257,7 @@
     "/api/services/categories": {
       "get": {
         "summary": "Get all service categories",
-        "tags": ["Service Categories"],
+        "tags": ["Services"],
         "security": [
           { "bearerAuth": [] }
         ],
@@ -288,7 +288,7 @@
     "/api/services/category/{id}/restore": {
       "patch": {
         "summary": "Restore a soft-deleted service category (admin only)",
-        "tags": ["Service Categories"],
+        "tags": ["Services"],
         "security": [
           { "bearerAuth": [] }
         ],

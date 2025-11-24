@@ -339,7 +339,7 @@ class ProductsService {
                 ipAddress: data.ipAddress
             });
 
-            return { message: 'Product restored successfully', data: newProductData };
+            return { message: 'Product restored successfully', data: { id: newProductData.id, name: newProductData.name } };
 
         } catch (error) {
             if (connection) await connection.rollback();
@@ -691,7 +691,7 @@ class ProductsService {
                 ipAddress: data.ipAddress
             });
 
-            return { message: 'Product category restored successfully', data: newCategoryData };
+            return { message: 'Product category restored successfully', data: { id: newCategoryData.id, name: newCategoryData.name } };
 
         } catch (error) {
             if (connection) await connection.rollback();
