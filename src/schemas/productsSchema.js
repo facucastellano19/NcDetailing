@@ -71,6 +71,11 @@ const putProductSchema = Joi.object({
         'number.integer': 'Category ID must be an integer',
         'number.positive': 'Category ID must be a positive number'
     }),
+    min_stock: Joi.number().integer().min(0).optional().messages({
+        'number.base': 'Min stock must be a number',
+        'number.integer': 'Min stock must be an integer',
+        'number.min': 'Min stock cannot be negative'
+    }),
     updated_by: Joi.number().integer().positive().forbidden().messages({
         'any.unknown': 'Cannot send updated_by field'
     })
