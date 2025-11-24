@@ -11,6 +11,7 @@ const productsRouter = require('./routers/productsRouter');
 const salesRouter = require('./routers/salesRouter');
 const metricsRouter = require('./routers/metricsRouter');
 const homeRouter = require('./routers/homeRouter');
+const auditLogRouter = require('./routers/auditLogRouter');
 
 // Middlewares
 const { logError, errorHandler } = require('./middlewares/errorHandler');
@@ -27,6 +28,7 @@ app.use('/api/services',servicesRouter)
 app.use('/api/clients',clientsRouter)
 app.use('/api/docs', docsRouter);
 app.use('/api/users',usersRouter)
+app.use('/api/audit-log', auditLogRouter);
 app.use('/api/employees',employeesRouter)
 app.use('/api/products',productsRouter);
 
