@@ -1,8 +1,8 @@
 const express = require('express')
 const {register} = require('../controllers/usersController');
-const { getEmployees, getEmployeeById, postEmployee, putEmployee, deleteEmployee } = require('../controllers/employeesController');
+const { getEmployees, getEmployeeById, postEmployee, putEmployee, deleteEmployee, restoreEmployee } = require('../controllers/employeesController');
 const {registerSchema} = require('../schemas/usersSchema');
-const {getEmployeeByIdSchema, putEmployeeSchema, deleteEmployeeSchema} = require('../schemas/employeesSchema');
+const {getEmployeesSchema, getEmployeeByIdSchema, putEmployeeSchema, deleteEmployeeSchema} = require('../schemas/employeesSchema');
 const {validatorHandler} = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
 
@@ -11,6 +11,7 @@ employeesRouter.use(express.json())
 
 employeesRouter.get('/',
     checkRole(1),
+    validatorHandler(getEmployeesSchema, 'query'),
     getEmployees)
 
 employeesRouter.get('/:id',
@@ -34,5 +35,10 @@ employeesRouter.delete('/:id',
     validatorHandler(deleteEmployeeSchema, 'params'),
     deleteEmployee)
 
+employeesRouter.patch('/:id/restore',
+    checkRole(1),
+    validatorHandler(getEmployeeByIdSchema, 'params'),
+    restoreEmployee
+)
 
 module.exports = employeesRouter

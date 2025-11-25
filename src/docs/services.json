@@ -21,6 +21,15 @@
             "description": "Filter services by category name (partial match)",
             "required": false,
             "schema": { "type": "string", "example": "Exterior" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter services by status. Defaults to 'active'.",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "inactive", "all"]
+            }
           }
         ],
         "responses": {
@@ -155,12 +164,113 @@
         }
       }
     },
+    "/api/services/{id}/restore": {
+      "patch": {
+        "summary": "Restore a soft-deleted service (admin only)",
+        "tags": ["Services"],
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the service to restore.",
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service restored successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ServiceResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Inactive service not found or is already active." }
+        }
+      }
+    },
+    "/api/services/category": {
+      "post": {
+        "summary": "Create or restore a service category",
+        "tags": ["Services"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CategoryPost" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Category created successfully", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CategoryResponse" } } } },
+          "200": { "description": "Category was soft-deleted and has been restored", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CategoryResponse" } } } },
+          "401": { "description": "Unauthorized" },
+          "409": { "description": "An active category with this name already exists" }
+        }
+      }
+    },
+    "/api/services/category/{id}": {
+      "get": {
+        "summary": "Get service category by ID",
+        "tags": ["Services"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "example": 1 } }],
+        "responses": {
+          "200": { "description": "Category retrieved successfully", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CategoryResponse" } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Category not found" }
+        }
+      },
+      "put": {
+        "summary": "Update a service category",
+        "tags": ["Services"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "example": 1 } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CategoryPost" } } }
+        },
+        "responses": {
+          "200": { "description": "Category updated successfully", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CategoryResponse" } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Category not found" },
+          "409": { "description": "Another category with this name already exists" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a service category",
+        "tags": ["Services"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "example": 1 } }],
+        "responses": {
+          "200": { "description": "Category deleted successfully", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Category deleted successfully" } } } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Category not found" },
+          "409": { "description": "Category is in use by services and cannot be deleted" }
+        }
+      }
+    },
     "/api/services/categories": {
       "get": {
         "summary": "Get all service categories",
         "tags": ["Services"],
         "security": [
           { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter categories by status. Defaults to 'active'.",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "inactive", "all"]
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -173,24 +283,27 @@
           },
           "401": { "description": "Unauthorized" }
         }
-      },
-      "post": {
-        "summary": "Create a new service category",
+      }
+    },
+    "/api/services/category/{id}/restore": {
+      "patch": {
+        "summary": "Restore a soft-deleted service category (admin only)",
         "tags": ["Services"],
         "security": [
           { "bearerAuth": [] }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CategoryPost" }
-            }
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the service category to restore.",
+            "schema": { "type": "integer", "example": 1 }
           }
-        },
+        ],
         "responses": {
-          "201": {
-            "description": "Category created successfully",
+          "200": {
+            "description": "Service category restored successfully",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/CategoryResponse" }
@@ -198,7 +311,7 @@
             }
           },
           "401": { "description": "Unauthorized" },
-          "409": { "description": "Category with this name already exists" }
+          "404": { "description": "Inactive service category not found or is already active." }
         }
       }
     }

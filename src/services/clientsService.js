@@ -1,4 +1,5 @@
 const getConnection = require('../database/mysql');
+const auditLogService = require('./auditLogService');
 
 class ClientsService {
 
@@ -202,6 +203,25 @@ class ClientsService {
 
             await connection.commit();
 
+            // Get the full new state of the client and their vehicles for auditing
+            const [newClientDataResult] = await connection.query(`SELECT * FROM clients WHERE id = ?`, [newCustomerId]);
+            const [newVehicles] = await connection.query(`SELECT * FROM vehicles WHERE client_id = ?`, [newCustomerId]);
+            const newState = {
+                client: newClientDataResult[0],
+                vehicles: newVehicles
+            };
+
+            // Audit Log
+            await auditLogService.log({
+                userId: data.created_by,
+                username: data.usernameToken,
+                actionType: 'CREATE',
+                entityType: 'client',
+                entityId: newCustomerId,
+                changes: { newValue: newState },
+                ipAddress: data.ipAddress
+            });
+
             return {
                 message: 'Client created successfully',
                 data: { id: newCustomerId, ...data }
@@ -209,6 +229,16 @@ class ClientsService {
 
         } catch (err) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.created_by,
+                username: data.usernameToken,
+                actionType: 'CREATE',
+                entityType: 'client',
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: err.message
+            });
             throw err; // Re-throw the error so the controller can catch it
         } finally {
             if (connection) connection.release();
@@ -218,11 +248,10 @@ class ClientsService {
 
     async putClient(id, data) {
         let connection;
+        let oldState = null; // This will hold both client and vehicle data
         try {
             connection = await getConnection();
-            await connection.beginTransaction();
 
-            // Verify if client exists
             const [queryClientExists] = await connection.query(
                 `SELECT * FROM clients WHERE id = ?`,
                 [id]
@@ -232,6 +261,16 @@ class ClientsService {
                 error.status = 404;
                 throw error;
             }
+            const oldClientData = queryClientExists[0];
+
+            const [oldVehicles] = await connection.query(
+                `SELECT * FROM vehicles WHERE client_id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+
+            oldState = { client: oldClientData, vehicles: oldVehicles };
+
+            await connection.beginTransaction();
 
             // Verify unique email and phone
             const [checkUnique] = await connection.query(
@@ -339,6 +378,27 @@ class ClientsService {
             // Confirm transaction
             await connection.commit();
 
+            const [newClientDataResult] = await connection.query(`SELECT * FROM clients WHERE id = ?`, [id]);
+            const newClientData = newClientDataResult[0];
+
+            const [newVehicles] = await connection.query(
+                `SELECT * FROM vehicles WHERE client_id = ? AND deleted_at IS NULL`,
+                [id]
+            );
+
+            const newState = { client: newClientData, vehicles: newVehicles };
+
+            // Audit Log for success
+            await auditLogService.log({
+                userId: data.updated_by,
+                username: data.usernameToken,
+                actionType: 'UPDATE',
+                entityType: 'client',
+                entityId: id,
+                changes: { oldValue: oldState, newValue: newState },
+                ipAddress: data.ipAddress
+            });
+
             return {
                 message: 'Client updated successfully',
                 data: { id, ...data }
@@ -346,6 +406,17 @@ class ClientsService {
 
         } catch (err) {
             await connection.rollback();
+            // Audit Log for failure
+            await auditLogService.log({
+                userId: data.updated_by,
+                username: data.usernameToken,
+                actionType: 'UPDATE',
+                entityType: 'client',
+                entityId: id,
+                ipAddress: data.ipAddress,
+                status: 'FAILURE',
+                errorMessage: err.message
+            });
             throw err;
         } finally {
             if (connection) connection.release();

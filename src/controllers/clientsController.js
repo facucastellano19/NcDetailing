@@ -46,6 +46,8 @@ async function postClient(req, res, next) {
     try {
         const data = req.body;
         data.created_by = req.userIdToken;
+        data.usernameToken = req.usernameToken;
+        data.ipAddress = req.ip;
         const newClient = await service.postClient(data);
         res.status(201).json(newClient);
     } catch (error) {
@@ -58,6 +60,8 @@ async function putClient(req, res, next) {
         const id = req.params.id;
         const data = req.body;
         data.updated_by = req.userIdToken;
+        data.usernameToken = req.usernameToken;
+        data.ipAddress = req.ip;
         const updatedClient = await service.putClient(id, data);
         res.json(updatedClient);
     } catch (error) {

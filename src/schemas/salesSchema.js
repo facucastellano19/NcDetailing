@@ -100,4 +100,24 @@ const updatePaymentStatusSchema = Joi.object({
     })
 });
 
-module.exports = { postSaleProductsSchema, postSaleServicesSchema, updatePaymentStatusSchema };
+const getSaleByIdSchema = Joi.object({
+    id: Joi.number().integer().positive().required()
+});
+
+const updateServiceStatusSchema = Joi.object({
+    service_status_id: Joi.number().integer().positive().valid(1, 2, 3, 4).required().messages({
+        'number.base': 'Service status ID must be a number.',
+        'number.integer': 'Service status ID must be an integer.',
+        'number.positive': 'Service status ID must be a positive number.',
+        'any.only': 'Service status ID must be one of [1, 2, 3, 4].',
+        'any.required': 'Service status ID is a required field.'
+    })
+});
+
+module.exports = { 
+    postSaleProductsSchema, 
+    postSaleServicesSchema, 
+    updatePaymentStatusSchema, 
+    getSaleByIdSchema, 
+    updateServiceStatusSchema 
+};

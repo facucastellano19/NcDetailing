@@ -1,27 +1,64 @@
 const express = require('express')
-const { getProducts, getProductById, postProduct, putProduct, updateMinStock, deleteProduct, postCategory, getCategories } = require('../controllers/productsController');
-const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema, getProductsSchema, updateMinStockSchema } = require('../schemas/productsSchema');
+const { getProducts, getProductById, postProduct, putProduct, deleteProduct, postCategory, getCategories, deleteCategory, putCategory, getCategoryById, restoreProduct, restoreCategory } = require('../controllers/productsController');
+const { getProductByIdSchema, postProductSchema, putProductSchema, deleteProductSchema, postCategorySchema, getProductsSchema, getCategoriesSchema } = require('../schemas/productsSchema');
 const { validatorHandler } = require('../middlewares/validatorHandler');
 const { checkRole } = require('../middlewares/secure');
-const { valid } = require('joi');
 
 const productsRouter = express.Router()
 productsRouter.use(express.json())
 
 productsRouter.get('/',
-    checkRole(1),
+    checkRole(1,2),
     validatorHandler(getProductsSchema, 'query'),
     getProducts)
 
 productsRouter.get('/categories',
-    checkRole(1),
+    checkRole(1,2),
+    validatorHandler(getCategoriesSchema, 'query'),
     getCategories
 )
 
-productsRouter.get('/:id',
+productsRouter.post('/category',
+    checkRole(1),
+    validatorHandler(postCategorySchema, 'body'),
+    postCategory
+)
+
+productsRouter.put('/category/:id',
+    checkRole(1),
+    validatorHandler(getProductByIdSchema, 'params'), 
+    validatorHandler(postCategorySchema, 'body'),   
+    putCategory
+)
+
+productsRouter.delete('/category/:id',
+    checkRole(1),
+    validatorHandler(deleteProductSchema, 'params'),
+    deleteCategory
+)
+
+productsRouter.patch('/category/:id/restore',
     checkRole(1),
     validatorHandler(getProductByIdSchema, 'params'),
+    restoreCategory
+);
+
+productsRouter.get('/category/:id',
+    checkRole(1),
+    validatorHandler(getProductByIdSchema, 'params'), 
+    getCategoryById
+)
+
+productsRouter.get('/:id',
+    checkRole(1,2),
+    validatorHandler(getProductByIdSchema, 'params'),
     getProductById)
+
+productsRouter.put('/:id',
+    checkRole(1),
+    validatorHandler(getProductByIdSchema, 'params'),
+    validatorHandler(putProductSchema, 'body'),
+    putProduct)
 
 productsRouter.post('/',
     checkRole(1),
@@ -29,28 +66,15 @@ productsRouter.post('/',
     postProduct
 )
 
-productsRouter.put('/:id',
-    checkRole(1),
-    validatorHandler(putProductSchema, 'body'),
-    putProduct)
-
-productsRouter.patch('/:id/min-stock',
-    checkRole(1),
-    validatorHandler(getProductByIdSchema, 'params'),
-    validatorHandler(updateMinStockSchema, 'body'),
-    updateMinStock
-)
-
 productsRouter.delete('/:id',
     checkRole(1),
     validatorHandler(deleteProductSchema, 'params'),
     deleteProduct)
 
-
-productsRouter.post('/category',
+productsRouter.patch('/:id/restore',
     checkRole(1),
-    validatorHandler(postCategorySchema, 'body'),
-    postCategory
-)
+    validatorHandler(getProductByIdSchema, 'params'),
+    restoreProduct
+);
 
 module.exports = productsRouter

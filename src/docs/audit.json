@@ -1,0 +1,91 @@
+{
+    "paths": {
+        "/api/audit-log": {
+            "get": {
+                "summary": "Get audit logs (Admin only)",
+                "tags": ["Audit"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "query",
+                        "description": "Filter logs by user ID.",
+                        "schema": { "type": "integer" }
+                    },
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "Filter logs by username (partial match).",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "actionType",
+                        "in": "query",
+                        "description": "Filter by action type (e.g., CREATE, UPDATE, DELETE, LOGIN_SUCCESS, LOGIN_FAIL).",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "entityType",
+                        "in": "query",
+                        "description": "Filter by entity type (e.g., product, client, sale_service).",
+                        "schema": { "type": "string" }
+                    },
+                    {
+                        "name": "startDate",
+                        "in": "query",
+                        "description": "Filter logs from this date onwards (YYYY-MM-DD).",
+                        "schema": { "type": "string", "format": "date" }
+                    },
+                    {
+                        "name": "endDate",
+                        "in": "query",
+                        "description": "Filter logs up to this date (YYYY-MM-DD).",
+                        "schema": { "type": "string", "format": "date" }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of audit log records.",
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/AuditLogListResponse" }
+                            }
+                        }
+                    },
+                    "401": { "$ref": "#/components/responses/UnauthorizedError" },
+                    "403": { "$ref": "#/components/responses/ForbiddenError" }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AuditLogRecord": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "integer" },
+                    "user_id": { "type": "integer" },
+                    "username": { "type": "string" },
+                    "action_type": { "type": "string" },
+                    "entity_type": { "type": "string" },
+                    "entity_id": { "type": "integer" },
+                    "changes": { "type": "object", "description": "JSON object detailing the changes made.", "nullable": true },
+                    "status": { "type": "string", "enum": ["SUCCESS", "FAILURE"] },
+                    "error_message": { "type": "string", "nullable": true },
+                    "ip_address": { "type": "string" },
+                    "created_at": { "type": "string", "format": "date-time" }
+                }
+            },
+            "AuditLogListResponse": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string", "example": "Audit logs retrieved successfully" },
+                    "data": {
+                        "type": "array",
+                        "items": { "$ref": "#/components/schemas/AuditLogRecord" }
+                    }
+                }
+            }
+        }
+    }
+}
