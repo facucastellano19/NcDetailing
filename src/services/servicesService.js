@@ -12,7 +12,6 @@ class ServicesService {
                 SELECT
                     s.id,
                     s.name,
-                    s.description,
                     s.price,
                     sc.name AS category
                 FROM services s
@@ -62,7 +61,6 @@ class ServicesService {
                     s.id, 
                     s.category_id,
                     s.name, 
-                    s.description, 
                     s.price, 
                     sc.name AS category_name
                 FROM services s
@@ -134,11 +132,11 @@ class ServicesService {
                     // 2a. Service is soft-deleted, so we "undelete" and update it
                     await connection.query(
                         `UPDATE services SET 
-                            category_id = ?, description = ?, price = ?, 
+                            category_id = ?, price = ?, 
                             deleted_at = NULL, deleted_by = NULL, 
                             updated_at = NOW(), updated_by = ? 
                          WHERE id = ?`,
-                        [data.category_id, data.description, data.price, data.created_by, service.id]
+                        [data.category_id, data.price, data.created_by, service.id]
                     );
                     await connection.commit();
 
@@ -163,9 +161,9 @@ class ServicesService {
             // 3. Service does not exist, create a new one
             const [result] = await connection.query(
                 `INSERT INTO services 
-                 (category_id, name, description, price, created_by, created_at)
-                 VALUES (?, ?, ?, ?, ?, NOW())`,
-                [data.category_id, data.name, data.description, data.price, data.created_by]
+                 (category_id, name, price, created_by, created_at)
+                 VALUES (?, ?, ?, ?, NOW())`,
+                [data.category_id, data.name, data.price, data.created_by]
             );
 
             await connection.commit();
@@ -474,7 +472,6 @@ class ServicesService {
                 `UPDATE services SET 
                  category_id = ?, 
                  name = ?, 
-                 description = ?, 
                  price = ?, 
                  updated_by = ?, 
                  updated_at = NOW()
@@ -482,7 +479,6 @@ class ServicesService {
                 [
                     data.category_id ?? service.category_id,
                     data.name ?? service.name,
-                    data.description ?? service.description,
                     data.price ?? service.price,
                     data.updated_by,
                     id
