@@ -324,9 +324,8 @@
           "id": { "type": "integer", "example": 1 },
           "category_id": { "type": "integer", "example": 1 },
           "name": { "type": "string", "example": "Basic Wash" },
-          "description": { "type": "string", "example": "Exterior wash and tire shine" },
           "price": { "type": "number", "format": "float", "example": 15.00 },
-          "category": { "type": "string", "example": "Exterior" }
+          "category_name": { "type": "string", "example": "Exterior" }
         }
       },
       "ServiceCategory": {
@@ -341,7 +340,6 @@
         "properties": {
           "category_id": { "type": "integer", "example": 1 },
           "name": { "type": "string", "example": "Premium Wash" },
-          "description": { "type": "string", "example": "Exterior wash, interior vacuum, tire shine" },
           "price": { "type": "number", "format": "float", "example": 25.00 }
         },
         "required": ["category_id", "name", "price"]
@@ -351,7 +349,6 @@
         "properties": {
           "category_id": { "type": "integer", "example": 1 },
           "name": { "type": "string", "example": "Deluxe Wash" },
-          "description": { "type": "string", "example": "Full exterior and interior detailing" },
           "price": { "type": "number", "format": "float", "example": 40.00 }
         }
       },
