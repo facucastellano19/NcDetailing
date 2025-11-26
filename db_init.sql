@@ -113,7 +113,6 @@ CREATE TABLE services (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category_id TINYINT NOT NULL,
     name VARCHAR(100) NOT NULL,
-    description TEXT,
     price DECIMAL(10,2) NOT NULL,
     -- Audit fields
     created_at DATETIME NULL,
@@ -191,7 +190,6 @@ CREATE TABLE product_categories (
 CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    description TEXT,
     price DECIMAL(10,2) NOT NULL,
     stock INT NOT NULL DEFAULT 0,
     category_id INT NOT NULL,

@@ -14,7 +14,7 @@ class ProductsService {
             const { name, category_id, status = 'active' } = params;
 
             let query = `
-                SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
+                SELECT p.id, p.name, p.price, p.stock, p.min_stock, pc.name as category
                 FROM products p
                 INNER JOIN product_categories pc ON p.category_id = pc.id
             `;
@@ -67,7 +67,7 @@ class ProductsService {
         try {
             connection = await getConnection();
             const query = `
-                SELECT p.id, p.name, p.description, p.price, p.stock, p.min_stock, pc.name as category
+                SELECT p.id, p.name, p.price, p.stock, p.min_stock, pc.name as category
                 FROM products p
                 INNER JOIN product_categories pc ON p.category_id = pc.id
                 WHERE p.deleted_at IS NULL AND p.id = ?
@@ -117,11 +117,11 @@ class ProductsService {
                     // 2a. Product is soft-deleted, so we "undelete" and update it
                     await connection.query(
                         `UPDATE products SET 
-                            description = ?, price = ?, stock = ?, min_stock = ?, category_id = ?,
+                            price = ?, stock = ?, min_stock = ?, category_id = ?,
                             deleted_at = NULL, deleted_by = NULL, 
                             updated_at = NOW(), updated_by = ? 
                          WHERE id = ?`,
-                        [data.description, data.price, data.stock, data.min_stock, data.category_id, data.created_by, product.id]
+                        [data.price, data.stock, data.min_stock, data.category_id, data.created_by, product.id]
                     );
                     await connection.commit();
 
@@ -157,9 +157,9 @@ class ProductsService {
 
             // Insert new product
             const [result] = await connection.query(
-                `INSERT INTO products (name, description, price, stock, min_stock, category_id, created_at, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)`,
-                [data.name, data.description, data.price, data.stock, data.min_stock, data.category_id, data.created_by]
+                `INSERT INTO products (name, price, stock, min_stock, category_id, created_at, created_by)
+                 VALUES (?, ?, ?, ?, ?, NOW(), ?)`,
+                [data.name, data.price, data.stock, data.min_stock, data.category_id, data.created_by]
             );
 
             await connection.commit();
@@ -238,11 +238,10 @@ class ProductsService {
             // 3. Update product
             await connection.query(
                 `UPDATE products
-                 SET name = ?, description = ?, price = ?, stock = ?, min_stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
+                 SET name = ?, price = ?, stock = ?, min_stock = ?, category_id = ?, updated_by = ?, updated_at = NOW()
                  WHERE id = ?`,
                 [
                     data.name ?? product.name,
-                    data.description ?? product.description,
                     data.price ?? product.price,
                     data.stock ?? product.stock,
                     data.min_stock ?? product.min_stock,
