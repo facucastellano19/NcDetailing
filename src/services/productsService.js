@@ -26,7 +26,7 @@ class ProductsService {
             } else if (status === 'inactive') {
                 whereConditions.push('p.deleted_at IS NOT NULL');
             }
-            // If status is 'all', no condition is added for deleted_at.
+            
 
             if (category_id) {
                 whereConditions.push(`p.category_id = ?`);
