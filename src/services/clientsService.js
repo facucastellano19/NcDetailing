@@ -166,7 +166,7 @@ class ClientsService {
                 const conflictPlates = [];
                 for (let vehicle of data.vehicles) {
                     const [existingVehicle] = await connection.query(
-                        `SELECT id FROM vehicles WHERE license_plate = ?`,
+                        `SELECT id FROM vehicles WHERE license_plate = ? AND deleted_at IS NULL`,
                         [vehicle.license_plate]
                     );
                     if (existingVehicle[0]) {
@@ -309,7 +309,7 @@ class ClientsService {
                 for (let vehicle of data.vehicles) {
                     if (!vehicle.deleted) {
                         const [existingVehicle] = await connection.query(
-                            `SELECT id FROM vehicles WHERE license_plate = ? AND id != ?`,
+                            `SELECT id FROM vehicles WHERE license_plate = ? AND id != ? AND deleted_at IS NULL`,
                             [vehicle.license_plate, vehicle.id || 0]
                         );
                         if (existingVehicle[0]) {
