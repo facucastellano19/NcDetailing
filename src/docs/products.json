@@ -35,7 +35,7 @@
             "description": "Filter products by status. Defaults to 'active'.",
             "schema": {
               "type": "string",
-              "enum": ["active", "inactive", "all"]
+              "enum": ["active", "inactive"]
             }
           }
         ],
@@ -84,7 +84,7 @@
             "description": "Filter categories by status. Defaults to 'active'.",
             "schema": {
               "type": "string",
-              "enum": ["active", "inactive", "all"]
+              "enum": ["active", "inactive"]
             }
           }
         ],

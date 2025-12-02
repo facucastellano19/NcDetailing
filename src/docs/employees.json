@@ -14,7 +14,7 @@
             "description": "Filter employees by status. Defaults to 'active'.",
             "schema": {
               "type": "string",
-              "enum": ["active", "inactive", "all"]
+              "enum": ["active", "inactive"]
             }
           }
         ],
