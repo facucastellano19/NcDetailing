@@ -34,7 +34,7 @@ class ProductsService {
             }
 
             if (params.name) {
-                query += ` AND p.name LIKE ?`;
+                whereConditions.push(`p.name LIKE ?`);
                 queryParams.push(`%${params.name}%`);
             }
 
