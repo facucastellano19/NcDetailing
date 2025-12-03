@@ -551,6 +551,38 @@ class SalesService {
                 );
             }
 
+            // If a product sale is canceled (ID 3), restore stock
+            if (oldSaleData.sale_type_id === 2 && payment_status_id === 3) {
+                // 1. Get all products from the sale
+                const [saleProducts] = await connection.query(
+                    `SELECT product_id, quantity FROM sale_products WHERE sale_id = ?`,
+                    [saleId]
+                );
+
+                // 2. Loop through them and restore stock
+                for (const item of saleProducts) {
+                    const [oldProductRows] = await connection.query(`SELECT * FROM products WHERE id = ?`, [item.product_id]);
+
+                    await connection.query(
+                        `UPDATE products SET stock = stock + ? WHERE id = ?`,
+                        [item.quantity, item.product_id]
+                    );
+
+                    const [newProductRows] = await connection.query(`SELECT * FROM products WHERE id = ?`, [item.product_id]);
+
+                    // Audit the stock restoration for each product
+                    await auditLogService.log({
+                        userId: updated_by,
+                        username: usernameToken,
+                        actionType: 'UPDATE',
+                        entityType: 'product',
+                        entityId: item.product_id,
+                        changes: { oldValue: oldProductRows[0], newValue: newProductRows[0], reason: `Stock restored from canceled sale #${saleId}` },
+                        ipAddress: ipAddress
+                    });
+                }
+            }
+
             await connection.commit();
 
             // Get the full new state of the sale for auditing
