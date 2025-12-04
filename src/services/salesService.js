@@ -256,6 +256,9 @@ class SalesService {
                 s.id AS sale_id,
                 CONCAT(c.first_name, ' ', c.last_name) AS client_name,
                 sv.id AS service_id,
+                v.brand AS vehicle_brand,
+                v.model AS vehicle_model,
+                v.license_plate AS vehicle_license_plate,
                 sv.name AS service_name,
                 ss.price,
                 s.total AS sale_total,
@@ -267,6 +270,7 @@ class SalesService {
             JOIN clients c ON s.client_id = c.id
             JOIN sale_services ss ON ss.sale_id = s.id
             JOIN services sv ON sv.id = ss.service_id
+            JOIN vehicles v ON s.vehicle_id = v.id
             JOIN payment_methods pm ON s.payment_method_id = pm.id
             JOIN payment_status ps ON s.payment_status_id = ps.id
             JOIN service_status ss_status ON s.service_status_id = ss_status.id
@@ -315,6 +319,11 @@ class SalesService {
                         payment_method: row.payment_method,
                         payment_status: row.payment_status,
                         service_status: row.service_status,
+                        vehicle: {
+                            brand: row.vehicle_brand,
+                            model: row.vehicle_model,
+                            license_plate: row.vehicle_license_plate
+                        },
                         created_at: row.created_at,
                         services: []
                     });
