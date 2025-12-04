@@ -39,13 +39,17 @@ class HomeService {
 
       const finalProductSales = Array.from(productSalesMap.values());
 
+      const summary = summaryMetrics?.[0] || {
+        totalSales: 0,
+        confirmedPayments: 0,
+        pendingPayments: 0
+      };
+
+      summary.totalSales = parseFloat(summary.confirmedPayments || 0) + parseFloat(summary.pendingPayments || 0);
+
       // ======== STRUCTURE RESPONSE ========
       return {
-        summary: summaryMetrics?.[0] || {
-          totalSales: 0,
-          confirmedPayments: 0,
-          pendingPayments: 0
-        },
+        summary: summary,
         recentActivity: {
           services: recentServiceSales || [],
           products: finalProductSales || []
