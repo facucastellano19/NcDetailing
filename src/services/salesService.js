@@ -21,7 +21,8 @@ class SalesService {
                     s.total AS sale_total,
                     pm.name AS payment_method,
                     ps.name AS payment_status,
-                    s.created_at
+                    s.created_at,
+                    s.observations
                 FROM sales s
                 JOIN clients c ON s.client_id = c.id
                 JOIN sale_products sp ON sp.sale_id = s.id
@@ -67,6 +68,7 @@ class SalesService {
                         sale_total: row.sale_total,
                         payment_method: row.payment_method,
                         payment_status: row.payment_status,
+                        observations: row.observations,
                         created_at: row.created_at,
                         products: []
                     });
@@ -144,6 +146,29 @@ class SalesService {
 
                 total += product.price * item.quantity;
             }
+
+            // --- DUPLICATE CHECK (Time-based) ---
+            // Check if an identical sale was created for this client in the last 10 seconds.
+            const [recentSales] = await connection.query(
+                `SELECT id FROM sales 
+                 WHERE client_id = ? 
+                   AND total = ? 
+                   AND sale_type_id = 2
+                   AND created_at >= NOW() - INTERVAL 10 SECOND`,
+                [data.client_id, total]
+            );
+
+            if (recentSales.length > 0) {
+                const error = new Error('Duplicate sale detected. This sale appears to have already been created.');
+                error.status = 429; // 429 Too Many Requests is a good status for this.
+                // We don't rollback here because we haven't changed anything yet.
+                // We just throw the error.
+                throw error;
+            }
+            // --- END DUPLICATE CHECK ---
+
+
+
 
             // Insert sale into sales table
             const [saleResult] = await connection.query(
@@ -256,17 +281,22 @@ class SalesService {
                 s.id AS sale_id,
                 CONCAT(c.first_name, ' ', c.last_name) AS client_name,
                 sv.id AS service_id,
+                v.brand AS vehicle_brand,
+                v.model AS vehicle_model,
+                v.license_plate AS vehicle_license_plate,
                 sv.name AS service_name,
                 ss.price,
                 s.total AS sale_total,
                 pm.name AS payment_method,
                 ps.name AS payment_status,
                 ss_status.name AS service_status,
-                s.created_at
+                s.created_at,
+                s.observations
             FROM sales s
             JOIN clients c ON s.client_id = c.id
             JOIN sale_services ss ON ss.sale_id = s.id
             JOIN services sv ON sv.id = ss.service_id
+            JOIN vehicles v ON s.vehicle_id = v.id
             JOIN payment_methods pm ON s.payment_method_id = pm.id
             JOIN payment_status ps ON s.payment_status_id = ps.id
             JOIN service_status ss_status ON s.service_status_id = ss_status.id
@@ -315,6 +345,12 @@ class SalesService {
                         payment_method: row.payment_method,
                         payment_status: row.payment_status,
                         service_status: row.service_status,
+                        observations: row.observations,
+                        vehicle: {
+                            brand: row.vehicle_brand,
+                            model: row.vehicle_model,
+                            license_plate: row.vehicle_license_plate
+                        },
                         created_at: row.created_at,
                         services: []
                     });
@@ -402,6 +438,26 @@ class SalesService {
             for (const { service_id } of services) {
                 total += servicePriceMap.get(service_id);
             }
+
+            // --- DUPLICATE CHECK (Time-based) ---
+            // Check if an identical service sale was created for this client/vehicle in the last 10 seconds.
+            const [recentSales] = await connection.query(
+                `SELECT id FROM sales 
+                 WHERE client_id = ? 
+                   AND vehicle_id = ?
+                   AND total = ? 
+                   AND sale_type_id = 1
+                   AND created_at >= NOW() - INTERVAL 10 SECOND`,
+                [client_id, vehicle_id, total]
+            );
+
+            if (recentSales.length > 0) {
+                const error = new Error('Duplicate sale detected. This sale appears to have already been created.');
+                error.status = 429; // 429 Too Many Requests
+                throw error;
+            }
+            // --- END DUPLICATE CHECK ---
+
 
             // Insert the main sale record with the correct total
             const [saleResult] = await connection.query(
@@ -549,6 +605,38 @@ class SalesService {
                     `UPDATE sales SET payment_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
                     [payment_status_id, updated_by, saleId]
                 );
+            }
+
+            // If a product sale is canceled (ID 3), restore stock
+            if (oldSaleData.sale_type_id === 2 && payment_status_id === 3) {
+                // 1. Get all products from the sale
+                const [saleProducts] = await connection.query(
+                    `SELECT product_id, quantity FROM sale_products WHERE sale_id = ?`,
+                    [saleId]
+                );
+
+                // 2. Loop through them and restore stock
+                for (const item of saleProducts) {
+                    const [oldProductRows] = await connection.query(`SELECT * FROM products WHERE id = ?`, [item.product_id]);
+
+                    await connection.query(
+                        `UPDATE products SET stock = stock + ? WHERE id = ?`,
+                        [item.quantity, item.product_id]
+                    );
+
+                    const [newProductRows] = await connection.query(`SELECT * FROM products WHERE id = ?`, [item.product_id]);
+
+                    // Audit the stock restoration for each product
+                    await auditLogService.log({
+                        userId: updated_by,
+                        username: usernameToken,
+                        actionType: 'UPDATE',
+                        entityType: 'product',
+                        entityId: item.product_id,
+                        changes: { oldValue: oldProductRows[0], newValue: newProductRows[0], reason: `Stock restored from canceled sale #${saleId}` },
+                        ipAddress: ipAddress
+                    });
+                }
             }
 
             await connection.commit();
