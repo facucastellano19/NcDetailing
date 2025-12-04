@@ -21,7 +21,8 @@ class SalesService {
                     s.total AS sale_total,
                     pm.name AS payment_method,
                     ps.name AS payment_status,
-                    s.created_at
+                    s.created_at,
+                    s.observations
                 FROM sales s
                 JOIN clients c ON s.client_id = c.id
                 JOIN sale_products sp ON sp.sale_id = s.id
@@ -67,6 +68,7 @@ class SalesService {
                         sale_total: row.sale_total,
                         payment_method: row.payment_method,
                         payment_status: row.payment_status,
+                        observations: row.observations,
                         created_at: row.created_at,
                         products: []
                     });
@@ -288,7 +290,8 @@ class SalesService {
                 pm.name AS payment_method,
                 ps.name AS payment_status,
                 ss_status.name AS service_status,
-                s.created_at
+                s.created_at,
+                s.observations
             FROM sales s
             JOIN clients c ON s.client_id = c.id
             JOIN sale_services ss ON ss.sale_id = s.id
@@ -342,6 +345,7 @@ class SalesService {
                         payment_method: row.payment_method,
                         payment_status: row.payment_status,
                         service_status: row.service_status,
+                        observations: row.observations,
                         vehicle: {
                             brand: row.vehicle_brand,
                             model: row.vehicle_model,
