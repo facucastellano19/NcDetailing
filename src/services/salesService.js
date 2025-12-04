@@ -145,6 +145,29 @@ class SalesService {
                 total += product.price * item.quantity;
             }
 
+            // --- DUPLICATE CHECK (Time-based) ---
+            // Check if an identical sale was created for this client in the last 10 seconds.
+            const [recentSales] = await connection.query(
+                `SELECT id FROM sales 
+                 WHERE client_id = ? 
+                   AND total = ? 
+                   AND sale_type_id = 2
+                   AND created_at >= NOW() - INTERVAL 10 SECOND`,
+                [data.client_id, total]
+            );
+
+            if (recentSales.length > 0) {
+                const error = new Error('Duplicate sale detected. This sale appears to have already been created.');
+                error.status = 429; // 429 Too Many Requests is a good status for this.
+                // We don't rollback here because we haven't changed anything yet.
+                // We just throw the error.
+                throw error;
+            }
+            // --- END DUPLICATE CHECK ---
+
+
+
+
             // Insert sale into sales table
             const [saleResult] = await connection.query(
                 `INSERT INTO sales (client_id, vehicle_id, sale_type_id, payment_status_id, payment_method_id, total, observations, created_by, created_at)
@@ -411,6 +434,26 @@ class SalesService {
             for (const { service_id } of services) {
                 total += servicePriceMap.get(service_id);
             }
+
+            // --- DUPLICATE CHECK (Time-based) ---
+            // Check if an identical service sale was created for this client/vehicle in the last 10 seconds.
+            const [recentSales] = await connection.query(
+                `SELECT id FROM sales 
+                 WHERE client_id = ? 
+                   AND vehicle_id = ?
+                   AND total = ? 
+                   AND sale_type_id = 1
+                   AND created_at >= NOW() - INTERVAL 10 SECOND`,
+                [client_id, vehicle_id, total]
+            );
+
+            if (recentSales.length > 0) {
+                const error = new Error('Duplicate sale detected. This sale appears to have already been created.');
+                error.status = 429; // 429 Too Many Requests
+                throw error;
+            }
+            // --- END DUPLICATE CHECK ---
+
 
             // Insert the main sale record with the correct total
             const [saleResult] = await connection.query(
