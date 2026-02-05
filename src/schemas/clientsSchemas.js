@@ -63,11 +63,10 @@ const postClientSchema = Joi.object({
     .max(20)
     .required()
     .messages({
-      "string.pattern.base":
-        "El teléfono solo puede contener números y el signo +",
-      "string.empty": "El teléfono es obligatorio",
-      "string.max": "El teléfono no puede exceder los 20 caracteres",
-      "any.required": "El teléfono es obligatorio",
+      "string.pattern.base": "Phone can only contain numbers and the '+' sign",
+      "string.empty": "Phone is required",
+      "string.max": "Phone cannot exceed 20 characters",
+      "any.required": "Phone is required",
     }),
   created_by: Joi.number().integer().forbidden().messages({
     "any.unknown": "Cannot send created_by field",
