@@ -13,6 +13,7 @@ class ServicesService {
                     s.id,
                     s.name,
                     s.price,
+                    s.category_id,
                     sc.name AS category
                 FROM services s
                 JOIN service_categories sc ON s.category_id = sc.id
