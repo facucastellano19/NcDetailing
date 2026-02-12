@@ -14,7 +14,7 @@ class ProductsService {
             const { name, category_id, status = 'active' } = params;
 
             let query = `
-                SELECT p.id, p.name, p.price, p.stock, p.min_stock, pc.name as category
+                SELECT p.id, p.name, p.price, p.stock, p.min_stock, pc.name as category, p.category_id
                 FROM products p
                 INNER JOIN product_categories pc ON p.category_id = pc.id
             `;
