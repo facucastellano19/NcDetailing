@@ -677,7 +677,7 @@ class ServicesService {
       await auditLogService.log({
         userId: data.updated_by,
         username: data.usernameToken,
-        actionType: "UPDATE",
+        actionType: "RESTORE",
         entityType: "service",
         entityId: id,
         ipAddress: data.ipAddress,
@@ -742,7 +742,7 @@ class ServicesService {
       await auditLogService.log({
         userId: data.updated_by,
         username: data.usernameToken,
-        actionType: "UPDATE",
+        actionType: "RESTORE",
         entityType: "service_category",
         entityId: id,
         ipAddress: data.ipAddress,

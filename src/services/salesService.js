@@ -69,6 +69,9 @@ class SalesService {
             payment_status: row.payment_status,
             observations: row.observations,
             created_at: row.created_at,
+            started_at: row.started_at,
+            completed_at: row.completed_at,
+            cancelled_at: row.cancelled_at,
             products: [],
           });
         }
@@ -95,6 +98,7 @@ class SalesService {
 
   async postSaleProducts(data) {
     let connection;
+    let clientData = null;
     try {
       connection = await getConnection();
       await connection.beginTransaction();
@@ -230,6 +234,11 @@ class SalesService {
 
       await connection.commit();
 
+      const [clientData] = await connection.query(
+        `SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM clients WHERE id = ?`,
+        [data.client_id],
+      );
+
       // Get the full new state of the sale for auditing
       const [newSaleDataResult] = await connection.query(
         `SELECT * FROM sales WHERE id = ?`,
@@ -247,6 +256,7 @@ class SalesService {
       // Combine sale data with product details for a complete audit record
       const newSaleState = {
         ...newSaleDataResult[0],
+        client_name: clientData[0]?.full_name || "Unknown client",
         products: saleProductsDetails,
       };
 
@@ -312,7 +322,10 @@ class SalesService {
                 ps.name AS payment_status,
                 ss_status.name AS service_status,
                 s.created_at,
-                s.observations
+                s.observations,
+                s.started_at,
+                s.completed_at,
+                s.cancelled_at
             FROM sales s
             JOIN clients c ON s.client_id = c.id
             JOIN sale_services ss ON ss.sale_id = s.id
@@ -373,6 +386,9 @@ class SalesService {
               license_plate: row.vehicle_license_plate,
             },
             created_at: row.created_at,
+            started_at: row.started_at,
+            completed_at: row.completed_at,
+            cancelled_at: row.cancelled_at,
             services: [],
           });
         }
@@ -534,9 +550,22 @@ class SalesService {
         [saleId],
       );
 
-      // Combine sale data with service details for a complete audit record
+      const [enrichedData] = await connection.query(
+        `SELECT 
+            CONCAT(c.first_name, ' ', c.last_name) AS client_name,
+            CONCAT(v.brand, ' ', v.model, ' (', v.license_plate, ')') AS vehicle_info
+         FROM clients c
+         JOIN vehicles v ON v.client_id = c.id
+         WHERE c.id = ? AND v.id = ?`,
+        [client_id, vehicle_id],
+      );
+
+      const info = enrichedData[0];
+
       const newSaleState = {
         ...newSaleDataResult[0],
+        client_name: info?.client_name || "Unknown client",
+        vehicle_details: info?.vehicle_info || "Unknown vehicle",
         services: saleServicesDetails,
       };
 
@@ -756,27 +785,26 @@ class SalesService {
       await connection.beginTransaction();
 
       const [sales] = await connection.query(
-        `SELECT * FROM sales WHERE id = ? AND sale_type_id = 1 AND deleted_at IS NULL`,
+        `SELECT * FROM sales WHERE id = ? AND deleted_at IS NULL`,
         [saleId],
       );
 
-      if (sales.length === 0) {
-        const error = new Error("Service sale not found");
-        error.status = 404;
-        throw error;
-      }
+      if (sales.length === 0) throw new Error("Service sale not found");
       oldSaleData = sales[0];
 
-      if (sales[0].service_status_id === service_status_id) {
-        const error = new Error(
-          "Sale is already in the requested service status.",
-        );
-        error.status = 400; // Bad Request, as no change is needed
-        throw error;
+      let timeUpdateQuery = "";
+
+      if (service_status_id === 2 && !oldSaleData.started_at) {
+        timeUpdateQuery = ", started_at = NOW()";
+      } else if (service_status_id === 3 && !oldSaleData.completed_at) {
+        const startPart = !oldSaleData.started_at ? ", started_at = NOW()" : "";
+        timeUpdateQuery = `${startPart}, completed_at = NOW()`;
+      } else if (service_status_id === 4) {
+        timeUpdateQuery = ", cancelled_at = NOW()";
       }
 
       await connection.query(
-        `UPDATE sales SET service_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
+        `UPDATE sales SET service_status_id = ?, updated_by = ?, updated_at = NOW() ${timeUpdateQuery} WHERE id = ?`,
         [service_status_id, updated_by, saleId],
       );
 

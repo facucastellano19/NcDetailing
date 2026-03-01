@@ -207,7 +207,7 @@ class EmployeesService {
       await auditLogService.log({
         userId: data.updated_by,
         username: data.usernameToken,
-        actionType: "UPDATE",
+        actionType: "RESTORE",
         entityType: "employee",
         entityId: id,
         changes: {

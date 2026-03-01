@@ -360,7 +360,7 @@ class ProductsService {
       await auditLogService.log({
         userId: data.updated_by,
         username: data.usernameToken,
-        actionType: "UPDATE",
+        actionType: "RESTORE",
         entityType: "product",
         entityId: id,
         changes: { oldValue: oldProductData, newValue: newProductData },
@@ -742,7 +742,7 @@ class ProductsService {
       await auditLogService.log({
         userId: data.updated_by,
         username: data.usernameToken,
-        actionType: "UPDATE",
+        actionType: "RESTORE",
         entityType: "product_category",
         entityId: id,
         ipAddress: data.ipAddres,
