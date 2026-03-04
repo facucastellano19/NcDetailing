@@ -21,7 +21,9 @@ class SalesService {
                     pm.name AS payment_method,
                     ps.name AS payment_status,
                     s.created_at,
-                    s.observations
+                    s.observations,
+                    s.paid_at,              
+                    s.payment_cancelled_at
                 FROM sales s
                 JOIN clients c ON s.client_id = c.id
                 JOIN sale_products sp ON sp.sale_id = s.id
@@ -70,6 +72,9 @@ class SalesService {
             observations: row.observations,
             created_at: row.created_at,
             started_at: row.started_at,
+            price: row.price,
+            paid_at: row.paid_at,
+            payment_cancelled_at: row.payment_cancelled_at,
             completed_at: row.completed_at,
             cancelled_at: row.cancelled_at,
             products: [],
@@ -81,6 +86,7 @@ class SalesService {
           product_name: row.product_name,
           quantity: row.quantity,
           price: row.price,
+          payment_cancelled_at: row.payment_cancelled_at,
           subtotal: row.subtotal,
         });
       });
@@ -325,7 +331,9 @@ class SalesService {
                 s.observations,
                 s.started_at,
                 s.completed_at,
-                s.cancelled_at
+                s.cancelled_at,
+                s.paid_at,              
+                s.payment_cancelled_at
             FROM sales s
             JOIN clients c ON s.client_id = c.id
             JOIN sale_services ss ON ss.sale_id = s.id
@@ -389,6 +397,10 @@ class SalesService {
             started_at: row.started_at,
             completed_at: row.completed_at,
             cancelled_at: row.cancelled_at,
+
+            paid_at: row.paid_at,
+            payment_cancelled_at: row.payment_cancelled_at,
+
             services: [],
           });
         }
@@ -642,51 +654,48 @@ class SalesService {
       }
       oldSaleData = sales[0];
 
-      if (sales[0].payment_status_id === payment_status_id) {
+      if (oldSaleData.payment_status_id === payment_status_id) {
         const error = new Error(
           "Sale is already in the requested payment status.",
         );
-        error.status = 400; // Bad Request, as no change is needed
+        error.status = 400;
         throw error;
       }
 
-      // If the payment status is 'Canceled' (ID 3), also update the service status to 'Canceled'.
-      if (payment_status_id === 3) {
-        // Find the ID for the 'Cancelado' service status
+      let extraFieldsQuery = "";
+      let serviceStatusUpdate = "";
+
+      if (payment_status_id === 2) {
+        extraFieldsQuery = ", paid_at = NOW(), payment_cancelled_at = NULL";
+      } else if (payment_status_id === 3) {
+        extraFieldsQuery = ", payment_cancelled_at = NOW(), paid_at = NULL";
+
         const [serviceStatusRows] = await connection.query(
           `SELECT id FROM service_status WHERE name = 'Cancelado' LIMIT 1`,
         );
 
-        if (serviceStatusRows.length === 0) {
-          // This is a server-side issue, the status should exist
-          throw new Error(
-            "Internal Server Error: 'Cancelado' service status not found.",
-          );
+        if (serviceStatusRows.length > 0) {
+          serviceStatusUpdate = `, service_status_id = ${serviceStatusRows[0].id}, cancelled_at = NOW()`;
         }
-        const canceledServiceStatusId = serviceStatusRows[0].id;
-
-        // Update both payment and service status
-        await connection.query(
-          `UPDATE sales SET payment_status_id = ?, service_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
-          [payment_status_id, canceledServiceStatusId, updated_by, saleId],
-        );
-      } else {
-        // Update only the payment status for other cases
-        await connection.query(
-          `UPDATE sales SET payment_status_id = ?, updated_by = ?, updated_at = NOW() WHERE id = ?`,
-          [payment_status_id, updated_by, saleId],
-        );
       }
 
-      // If a product sale is canceled (ID 3), restore stock
+      await connection.query(
+        `UPDATE sales SET 
+        payment_status_id = ?, 
+        updated_by = ?, 
+        updated_at = NOW() 
+        ${extraFieldsQuery} 
+        ${serviceStatusUpdate} 
+       WHERE id = ?`,
+        [payment_status_id, updated_by, saleId],
+      );
+
       if (oldSaleData.sale_type_id === 2 && payment_status_id === 3) {
-        // 1. Get all products from the sale
         const [saleProducts] = await connection.query(
           `SELECT product_id, quantity FROM sale_products WHERE sale_id = ?`,
           [saleId],
         );
 
-        // 2. Loop through them and restore stock
         for (const item of saleProducts) {
           const [oldProductRows] = await connection.query(
             `SELECT * FROM products WHERE id = ?`,
@@ -703,7 +712,6 @@ class SalesService {
             [item.product_id],
           );
 
-          // Audit the stock restoration for each product
           await auditLogService.log({
             userId: updated_by,
             username: usernameToken,
@@ -722,25 +730,21 @@ class SalesService {
 
       await connection.commit();
 
-      // Get the full new state of the sale for auditing
       const [newSaleDataResult] = await connection.query(
         `SELECT * FROM sales WHERE id = ?`,
         [saleId],
       );
-      const newSaleData = newSaleDataResult[0];
 
-      // Determine the correct entity type based on the sale type
       const entityType =
         oldSaleData.sale_type_id === 1 ? "sale_service" : "sale_product";
 
-      // Audit Log for success
       await auditLogService.log({
         userId: updated_by,
         username: usernameToken,
         actionType: "UPDATE",
         entityType: entityType,
         entityId: saleId,
-        changes: { oldValue: oldSaleData, newValue: newSaleData },
+        changes: { oldValue: oldSaleData, newValue: newSaleDataResult[0] },
         ipAddress: ipAddress,
       });
 
@@ -750,14 +754,12 @@ class SalesService {
       };
     } catch (error) {
       if (connection) await connection.rollback();
-      // Determine entity type even on failure, if possible
       const entityType = oldSaleData
         ? oldSaleData.sale_type_id === 1
           ? "sale_service"
           : "sale_product"
         : "sale";
 
-      // Audit Log for failure
       await auditLogService.log({
         userId: updated_by,
         username: usernameToken,
@@ -803,7 +805,8 @@ class SalesService {
       } else if (service_status_id === 4) {
         timeUpdateQuery = ", cancelled_at = NOW()";
 
-        extraFieldsQuery = ", payment_status_id = 3";
+        extraFieldsQuery =
+          ", payment_status_id = 3, payment_cancelled_at = NOW()";
       }
 
       await connection.query(
